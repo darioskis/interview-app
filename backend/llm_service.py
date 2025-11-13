@@ -98,8 +98,7 @@ class LLMService:
             likelihood=str(payload.get("likelihood", "Unknown")),
             reasoning=str(payload.get("reasoning", "")),
         )
-
-def chat_response(
+    def chat_response(
         self,
         messages: List[Dict[str, str]],
         job_requirements: Iterable[str],
