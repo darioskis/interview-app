@@ -35,17 +35,14 @@ class LLMService:
         self.client = OpenAI(api_key=api_key)
 
     def _call(self, prompt: str) -> str:
-        response = self.client.responses.create(
+        """Send a simple user prompt via the Chat Completions API."""
+
+        completion = self.client.chat.completions.create(
             model=self.model,
             temperature=self.temperature,
-            input=[
-                {
-                    "role": "user",
-                    "content": [{"type": "input_text", "text": prompt}],
-                }
-            ],
+            messages=[{"role": "user", "content": prompt}],
         )
-        return response.output[0].content[0].text.strip()
+        return (completion.choices[0].message.content or "").strip()
 
     def extract_requirements(self, job_description: str) -> List[str]:
         prompt = (
