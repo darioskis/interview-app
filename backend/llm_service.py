@@ -38,7 +38,12 @@ class LLMService:
         response = self.client.responses.create(
             model=self.model,
             temperature=self.temperature,
-            input=[{"role": "user", "content": [{"type": "text", "text": prompt}]}],
+            input=[
+                {
+                    "role": "user",
+                    "content": [{"type": "input_text", "text": prompt}],
+                }
+            ],
         )
         return response.output[0].content[0].text.strip()
 
@@ -103,28 +108,20 @@ class LLMService:
             "You are a concise interview preparation assistant. Keep answers short, specific, "
             "and grounded in the candidate's experience. Avoid speculation."
         )
-        formatted_history = [
-            {
-                "role": msg["role"],
-                "content": [
-                    {
-                        "type": "text",
-                        "text": (
-                            context
-                            if msg["role"] == "system"
-                            else _inject_profile_context(msg["content"], job_requirements, strengths, weaknesses)
-                        ),
-                    }
-                ],
-            }
-            for msg in messages
-        ]
-        response = self.client.responses.create(
-            model=self.model,
-            temperature=self.temperature,
-            input=formatted_history,
+        profile_context = _profile_blob(job_requirements, strengths, weaknesses)
+        conversation: List[str] = []
+        for msg in messages:
+            if msg["role"] == "system":
+                continue
+            speaker = "Candidate" if msg["role"] == "user" else "Coach"
+            conversation.append(f"{speaker}: {msg['content']}")
+        prompt = (
+            f"{context}\n\nProfile context:\n{profile_context}\n\n"
+            "Conversation so far:\n"
+            + "\n".join(conversation)
+            + "\nCoach:"
         )
-        return response.output[0].content[0].text.strip()
+        return self._call(prompt)
 
 
 def _parse_bullets(text: str) -> List[str]:
@@ -157,18 +154,16 @@ def _extract_json(text: str) -> str:
     return "{}"
 
 
-def _inject_profile_context(
-    message: str,
+def _profile_blob(
     job_requirements: Iterable[str],
     strengths: Iterable[str],
     weaknesses: Iterable[str],
 ) -> str:
-    profile = (
+    return (
         "Job requirements: "
-        + ", ".join(job_requirements or [])
+        + (", ".join(job_requirements) or "Not provided")
         + "\nStrengths: "
-        + ", ".join(strengths or [])
+        + (", ".join(strengths) or "Not available")
         + "\nWeaknesses: "
-        + ", ".join(weaknesses or [])
-    )
-    return f"{message}\n\nProfile context:\n{profile.strip()}"
+        + (", ".join(weaknesses) or "Not available")
+    ).strip()
