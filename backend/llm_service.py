@@ -35,14 +35,19 @@ class LLMService:
         self.client = OpenAI(api_key=api_key)
 
     def _call(self, prompt: str) -> str:
-        """Send a simple user prompt via the Chat Completions API."""
+        """Send a simple user prompt via the Responses API."""
 
-        completion = self.client.chat.completions.create(
+        response = self.client.responses.create(
             model=self.model,
             temperature=self.temperature,
-            messages=[{"role": "user", "content": prompt}],
+            input=[
+                {
+                    "role": "user",
+                    "content": [{"type": "input_text", "text": prompt}],
+                }
+            ],
         )
-        return (completion.choices[0].message.content or "").strip()
+        return _response_to_text(response)
 
     def extract_requirements(self, job_description: str) -> List[str]:
         prompt = (
@@ -94,7 +99,7 @@ class LLMService:
             reasoning=str(payload.get("reasoning", "")),
         )
 
-    def chat_response(
+def chat_response(
         self,
         messages: List[Dict[str, str]],
         job_requirements: Iterable[str],
@@ -119,6 +124,21 @@ class LLMService:
             + "\nCoach:"
         )
         return self._call(prompt)
+
+
+def _response_to_text(response) -> str:
+    """Extract the assistant text from a Responses API payload."""
+
+    texts: List[str] = []
+    output = getattr(response, "output", None) or []
+    for item in output:
+        for content in getattr(item, "content", []) or []:
+            text = getattr(content, "text", None)
+            if text:
+                texts.append(text)
+    if not texts:
+        texts.extend(getattr(response, "output_text", []) or [])
+    return "\n".join(texts).strip()
 
 
 def _parse_bullets(text: str) -> List[str]:
