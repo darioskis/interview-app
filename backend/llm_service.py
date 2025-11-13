@@ -38,12 +38,7 @@ class LLMService:
         response = self.client.responses.create(
             model=self.model,
             temperature=self.temperature,
-            input=[
-                {
-                    "role": "user",
-                    "content": [{"type": "input_text", "text": prompt}],
-                }
-            ],
+            input=[{"role": "user", "content": [{"type": "text", "text": prompt}]}],
         )
         return response.output[0].content[0].text.strip()
 
@@ -113,13 +108,11 @@ class LLMService:
                 "role": msg["role"],
                 "content": [
                     {
-                        "type": "input_text",
+                        "type": "text",
                         "text": (
                             context
                             if msg["role"] == "system"
-                            else _inject_profile_context(
-                                msg["content"], job_requirements, strengths, weaknesses
-                            )
+                            else _inject_profile_context(msg["content"], job_requirements, strengths, weaknesses)
                         ),
                     }
                 ],
