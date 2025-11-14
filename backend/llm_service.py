@@ -68,7 +68,7 @@ class LLMService:
             Rephrase extracted requirements in 2-3 words each. Be specific. List out top7 that looks most important. 
             Check if these 7 are really the most important to the position. Add brief explanation why you think so.
             
-            Return only a numbered list in the format each requirement starting in a new row:
+            Return only a numbered list in the format each requirement starting in a new row adjusted for Streamlit UI format:
             Requirement - explanation
 
             
@@ -86,13 +86,10 @@ class LLMService:
             experience, or areas to improve).
             Step 1. Identify up to 5 key strengths and name them in 2-3 words
             Step 2. Identify up to 5 key weaknesses and name them in 2-3 words
-            Step 3. In one sentence explain how to use those strengths
-            Step 4. In one sentence explain how to cover weaknesses
             
-            Return only two bullet lists titled Strengths and
-            Weaknesses. 
-
-            Each Strength and Weakness should start at new line, followed by one sentence explanation
+            Return only two numbered lists titled Strengths and
+            Weaknesses. Each Strength and Weakness should start at new line. 
+            Return format suitable for Streamlit UI.
             
             \nJob requirements:\n"""
             f"""{requirements_blob or '- Not available'}\n\nResume:\n{cv_text}"""
