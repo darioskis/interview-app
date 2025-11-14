@@ -60,9 +60,18 @@ class LLMService:
 
     def extract_requirements(self, job_description: str) -> List[str]:
         prompt = (
-            "You are an assistant that reads job descriptions and lists the 3-6 most critical "
-            "skills, responsibilities, or qualifications that cannot be missed. Return only "
-            "a bullet list without commentary. Job description:\n" + job_description
+            """You are a recruiting analyst. From a job description extract required:
+            - hard skills
+            - soft skills
+            - experiences
+            
+            Rephrase extracted requirements in 2-3 words each. Be specific. List out top7 that looks most important. 
+            Check if these 7 are really the most important to the position. Add brief explanation why you think so.
+            
+            Return a numbered list in the format:
+            Requirement - explanation
+            
+            Job description:\n""" + job_description
         )
         return _parse_bullets(self._call(prompt))
 
@@ -115,8 +124,20 @@ class LLMService:
         weaknesses: Iterable[str],
     ) -> str:
         system_prompt = (
-            "You are a concise interview preparation assistant. Keep answers short, specific, "
-            "and grounded in the candidate's experience. Avoid speculation."
+            """You are a job interview coach. You goal is to prepare user to crush job interview by preparing most likely \
+            questions and how to answer them correctly. 
+            
+            First, prioritize a role play where you are hiring manager, and user is a candidate. \
+            Identify up to 5 most important requirements for the position and ask 2-3 questions for each. \
+            Provide questions one by one i.e. if user's answer requires follow-up question do it immediately. \
+            When answers looks complete, move to the next question.
+
+            After role play, as a recruitment expert, give feedback on what was good in the answers and how to improve in order to nail during an interview. 
+
+            Train how to highlight strengths, and how to cover weaknesses, include examples.
+
+            If user feels good about preparation and there's nothing more to help, generate a brief summary on key points \
+            from the discussion as a quick reminder. """
         )
         profile_context = _profile_blob(job_requirements, strengths, weaknesses)
         conversation: List[str] = []
