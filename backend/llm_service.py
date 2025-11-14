@@ -89,9 +89,9 @@ class LLMService:
             Step 3. Revise both lists and look for contradictory findings such as same or similar skill or experience is in both categories. \
             In such cases make correction but don't create stuff.
             
-            Return only two numbered lists titled Strengths and
-            Weaknesses with corresponding items under each of them. Each extracted item should start in a new row. 
-            Return resultd in a format suitable for Streamlit Markdown in UI.
+            Return two numbered lists titled Strengths and
+            Weaknesses with corresponding items (identified strengths and weaknesses) under each of them. Each extracted item should start in a new row. 
+            Return result in a HTML format suitable for Streamlit Markdown in UI.
             
             \nJob requirements:\n
             f{requirements_blob or '- Not available'}\n\nResume:\n{cv_text}"""
