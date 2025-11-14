@@ -68,8 +68,9 @@ class LLMService:
             Rephrase extracted requirements in 2-3 words each. Be specific. List out top7 that looks most important. 
             Check if these 7 are really the most important to the position. Add brief explanation why you think so.
             
-            Return a numbered list in the format:
+            Return only a numbered list in the format each requirement starting in a new row:
             Requirement - explanation
+
             
             Job description:\n""" + job_description
         )
