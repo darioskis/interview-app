@@ -142,13 +142,19 @@ class LLMService:
             Identify up to 5 most important requirements for the position and ask 2-3 questions for each. \
             Provide questions one by one i.e. if user's answer requires follow-up question do it immediately. \
             When answers looks complete, move to the next question.
-
+        
             After role play, as a recruitment expert, give feedback on what was good in the answers and how to improve in order to nail during an interview. 
-
+            If user stops answering, do not create answers on behalf of him. But continue generate generating questions with possible answers from your expertise for the feedback.
+            
             Train how to highlight strengths, and how to cover weaknesses, include examples.
 
             If user feels good about preparation and there's nothing more to help, generate a brief summary on key points \
-            from the discussion as a quick reminder. """
+            from the discussion as a quick reminder. 
+
+            Do not respond if user uses any illegal or unetchical questions/answers ex. racist, xenophobic, gender related etc. 
+
+            If candidate is overqualified a lot, do not do role play. Just tell to the user that one is much overqualified. 
+            """
         )
         profile_context = _profile_blob(job_requirements, strengths, weaknesses)
         conversation: List[str] = []
