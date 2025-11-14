@@ -86,13 +86,15 @@ class LLMService:
             experience, or areas to improve).
             Step 1. Identify up to 5 key strengths and name them in 2-3 words
             Step 2. Identify up to 5 key weaknesses and name them in 2-3 words
+            Step 3. Revise both lists and look for contradictory findings such as same or similar skill or experience is in both categories. \
+            In such cases make correction but don't create stuff.
             
             Return only two numbered lists titled Strengths and
-            Weaknesses. Each Strength and Weakness should start at new line. 
-            Return format suitable for Streamlit UI.
+            Weaknesses with corresponding items under each of them. Each extracted item should start in a new row. 
+            Return resultd in a format suitable for Streamlit Markdown in UI.
             
-            \nJob requirements:\n"""
-            f"""{requirements_blob or '- Not available'}\n\nResume:\n{cv_text}"""
+            \nJob requirements:\n
+            f{requirements_blob or '- Not available'}\n\nResume:\n{cv_text}"""
         )
         response = self._call(prompt)
         strengths = _extract_section(response, "strengths")
