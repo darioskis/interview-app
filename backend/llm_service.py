@@ -81,11 +81,21 @@ class LLMService:
     ) -> Tuple[List[str], List[str]]:
         requirements_blob = "\n".join(f"- {req}" for req in job_requirements)
         prompt = (
-            "Given the resume details below and the job requirements, highlight the key strengths "
-            "(skills or experiences that align with the job) and weaknesses (gaps, missing "
-            "experience, or areas to improve). Provide two bullet lists titled Strengths and "
-            "Weaknesses.\nJob requirements:\n"
-            f"{requirements_blob or '- Not available'}\n\nResume:\n{cv_text}"
+            """Given the resume details below and the job requirements, highlight the key strengths
+            (skills or experiences that align with the job) and weaknesses (gaps, missing
+            experience, or areas to improve).
+            Step 1. Identify up to 5 key strengths and name them in 2-3 words
+            Step 2. Identify up to 5 key weaknesses and name them in 2-3 words
+            Step 3. In one sentence explain how to use those strengths
+            Step 4. In one sentence explain how to cover weaknesses
+            
+            Return only two bullet lists titled Strengths and
+            Weaknesses. 
+
+            Each Strength and Weakness should start at new line, followed by one sentence explanation
+            
+            \nJob requirements:\n"""
+            f"""{requirements_blob or '- Not available'}\n\nResume:\n{cv_text}"""
         )
         response = self._call(prompt)
         strengths = _extract_section(response, "strengths")
