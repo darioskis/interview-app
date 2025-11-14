@@ -51,9 +51,9 @@ class LLMService:
 
     def extract_requirements(self, job_description: str) -> List[str]:
         prompt = (
-            "You are an assistant that reads job descriptions and lists the 3-6 most critical "
-            "skills, responsibilities, or qualifications that cannot be missed. Return only "
-            "a bullet list without commentary. Job description:\n" + job_description
+            """You are a recruiting analyst. From a job description extract skills and experiences \
+            and rephrase it in 2-3 words each. Be specific. List out top5 most important ones. Return only \
+            a bullet list without commentary. Job description:\n""" + job_description
         )
         return _parse_bullets(self._call(prompt))
 
