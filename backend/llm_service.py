@@ -24,7 +24,7 @@ class MatchReport:
 class LLMService:
     """Simple wrapper around the OpenAI Responses API."""
 
-    def __init__(self, temperature: float = 0.1, model: str = "gpt-4o-mini") -> None:
+    def __init__(self, temperature: float = 0.5, model: str = "gpt-4o-mini") -> None:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise RuntimeError(
@@ -68,7 +68,7 @@ class LLMService:
             Rephrase extracted requirements in 2-3 words each. Be specific. List out top 7 that looks most important. 
             Check if these 7 are really the most important to the position. Add brief explanation why you think so.
             
-            Return only a numbered list with each requirement starting in a new row. Result should be provided in HTML format suitable for Streamlit UI format on a webpage.
+            Return only a numbered list with each requirement starting in a new row on a webpage.
 
             
             Job description:\n""" + job_description
@@ -89,8 +89,7 @@ class LLMService:
 
             Format:
             Return two numbered lists titled Strengths and Weaknesses with corresponding items (identified strengths and weaknesses) under each of them. 
-            Each extracted item should start in a new row. 
-            Return result in a HTML suitable for Streamlit Markdown in UI so that it reflects format conditions mentioned above.
+            Each extracted item should start in a new row on a website. 
             
             \nJob requirements:\n
             {requirements_blob or '- Not available'}\n\nResume:\n{cv_text}"""
