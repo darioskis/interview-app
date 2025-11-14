@@ -65,11 +65,10 @@ class LLMService:
             - soft skills
             - experiences
             
-            Rephrase extracted requirements in 2-3 words each. Be specific. List out top7 that looks most important. 
+            Rephrase extracted requirements in 2-3 words each. Be specific. List out top 7 that looks most important. 
             Check if these 7 are really the most important to the position. Add brief explanation why you think so.
             
-            Return only a numbered list in the format each requirement starting in a new row adjusted for Streamlit UI format:
-            Requirement - explanation
+            Return only a numbered list with each requirement starting in a new row. Result should be provided in HTML format suitable for Streamlit UI format on a webpage.
 
             
             Job description:\n""" + job_description
@@ -81,20 +80,20 @@ class LLMService:
     ) -> Tuple[List[str], List[str]]:
         requirements_blob = "\n".join(f"- {req}" for req in job_requirements)
         prompt = (
-            """Given the resume details below and the job requirements, highlight the key strengths
+            f"""Given the resume details below and the job requirements, highlight the key strengths
             (skills or experiences that align with the job) and weaknesses (gaps, missing
-            experience, or areas to improve).
-            Step 1. Identify up to 5 key strengths and name them in 2-3 words
-            Step 2. Identify up to 5 key weaknesses and name them in 2-3 words
-            Step 3. Revise both lists and look for contradictory findings such as same or similar skill or experience is in both categories. \
-            In such cases make correction but don't create stuff.
+            experience, or areas to improve). Each category should have up to 5 highlighted items, named in 2-3 words each.
             
-            Return two numbered lists titled Strengths and
-            Weaknesses with corresponding items (identified strengths and weaknesses) under each of them. Each extracted item should start in a new row. 
-            Return result in a HTML format suitable for Streamlit Markdown in UI.
+            Revise items in both lists and look for contradictory findings such as same or similar skill or experience is in both categories. \
+            example. Strength - ERP/CRM Implementation experience, weakness - little ERP/CRM Implementation experience. 
+
+            Format:
+            Return two numbered lists titled Strengths and Weaknesses with corresponding items (identified strengths and weaknesses) under each of them. 
+            Each extracted item should start in a new row. 
+            Return result in a HTML suitable for Streamlit Markdown in UI so that it reflects format conditions mentioned above.
             
             \nJob requirements:\n
-            f{requirements_blob or '- Not available'}\n\nResume:\n{cv_text}"""
+            {requirements_blob or '- Not available'}\n\nResume:\n{cv_text}"""
         )
         response = self._call(prompt)
         strengths = _extract_section(response, "strengths")
