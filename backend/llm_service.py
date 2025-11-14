@@ -133,7 +133,7 @@ class LLMService:
     ) -> str:
         system_prompt = (
             """You are a job interview coach. You goal is to prepare user to crush job interview by preparing most likely \
-            questions and how to answer them correctly. 
+            questions and how to answer them correctly. Always ask clarifying questions when context is missing.
             
             First, prioritize a role play where you are hiring manager, and user is a candidate. \
             Identify up to 5 most important requirements for the position and ask 2-3 questions for each. \
