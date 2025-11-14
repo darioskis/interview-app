@@ -68,8 +68,7 @@ class LLMService:
             Rephrase extracted requirements in 2-3 words each. Be specific. List out top 7 that looks most important. 
             Check if these 7 are really the most important to the position. Add brief explanation why you think so.
             
-            Return only a numbered list with each requirement starting in a new row on a webpage.
-
+            Return results in a Python list format.
             
             Job description:\n""" + job_description
         )
@@ -88,8 +87,7 @@ class LLMService:
             example. Strength - ERP/CRM Implementation experience, weakness - little ERP/CRM Implementation experience. 
 
             Format:
-            Return two numbered lists titled Strengths and Weaknesses with corresponding items (identified strengths and weaknesses) under each of them. 
-            Each extracted item should start in a new row on a website. 
+            Return two numbered lists with strengths and weaknesses.
             
             \nJob requirements:\n
             {requirements_blob or '- Not available'}\n\nResume:\n{cv_text}"""
