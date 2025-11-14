@@ -66,9 +66,11 @@ class LLMService:
             - experiences
             
             Rephrase extracted requirements in 2-3 words each. Be specific. List out top 7 that looks most important. 
-            Check if these 7 are really the most important to the position. Add brief explanation why you think so.
-            
-            Return results in a Python list format.
+            Add brief explanation why you think so.
+
+            - Return only named requirements with brief explanation
+            - Return as a numbered list, starting each item on a new line
+            - Return results in a Python list format.
             
             Job description:\n""" + job_description
         )
