@@ -123,6 +123,8 @@ with col_chat:
                 st.session_state.job_requirements,
                 st.session_state.strengths,
                 st.session_state.weaknesses,
+                st.session_state.job_description,
+                st.session_state.cv_text
             )
         st.session_state.messages.append({"role": "assistant", "content": response})
         with st.chat_message("assistant"):
