@@ -24,7 +24,7 @@ class MatchReport:
 class LLMService:
     """Simple wrapper around the OpenAI Responses API."""
 
-    def __init__(self, temperature: float = 0.5, model: str = "gpt-4o-mini") -> None:
+    def __init__(self, temperature: float = 0.8, top_p: float = 0.7, model: str = "gpt-4.1") -> None:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise RuntimeError(
