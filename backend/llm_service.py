@@ -85,7 +85,9 @@ class LLMService:
             experience, or areas to improve). Each category should have up to 5 highlighted items, named in 2-3 words each.
             
             Revise items in both lists and look for contradictory findings such as same or similar skill or experience is in both categories. \
-            example. Strength - ERP/CRM Implementation experience, weakness - little ERP/CRM Implementation experience. 
+            example. Strength - ERP/CRM Implementation experience, weakness - little ERP/CRM Implementation experience.
+
+            Return two lists with only extracted results. One list is strengths, other weaknesses.
             
             \nJob requirements:\n
             {requirements_blob or '- Not available'}\n\nResume:\n{cv_text}"""
