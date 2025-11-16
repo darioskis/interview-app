@@ -128,6 +128,8 @@ class LLMService:
         job_requirements: Iterable[str],
         strengths: Iterable[str],
         weaknesses: Iterable[str],
+        job_description: str,
+        cv_text: str
     ) -> str:
         system_prompt = (
             f"""You are a job interview coach. You goal is to prepare user to crush job interview by preparing most likely \
