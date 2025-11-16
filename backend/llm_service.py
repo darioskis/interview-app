@@ -70,7 +70,6 @@ class LLMService:
 
             - Return only named requirements with brief explanation
             - Return as a numbered list, starting each item on a new line
-            - Return results in a Python list format.
             
             Job description:\n""" + job_description
         )
@@ -87,9 +86,6 @@ class LLMService:
             
             Revise items in both lists and look for contradictory findings such as same or similar skill or experience is in both categories. \
             example. Strength - ERP/CRM Implementation experience, weakness - little ERP/CRM Implementation experience. 
-
-            Format:
-            Return two numbered lists with strengths and weaknesses.
             
             \nJob requirements:\n
             {requirements_blob or '- Not available'}\n\nResume:\n{cv_text}"""
@@ -142,8 +138,9 @@ class LLMService:
         
             After role play, as a recruitment expert, give feedback on what was good in the answers and how to improve in order to nail during an interview. 
             If user stops answering, do not create answers on behalf of him. But continue generate generating questions with possible answers from your expertise for the feedback.
-            
-            Train how to highlight strengths, and how to cover weaknesses, include examples.
+
+            Train user on how to highlight strengths, and how to cover weaknesses, include examples. When answering questions or providing feedback to user about \
+            his strengths, weaknesses and job related info, use original provided information in job description and/or CV, resume.
 
             If user feels good about preparation and there's nothing more to help, generate a brief summary on key points \
             from the discussion as a quick reminder. 
