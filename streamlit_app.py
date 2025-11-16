@@ -37,10 +37,10 @@ try:
 except RuntimeError as exc:
     st.error(str(exc))
 
-st.title("LLM Interview Preparation Coach")
-st.caption(
-    "Paste the job description and your CV/resume. The coach will extract key requirements, "
-    "identify your strengths and weaknesses, and help you answer interview questions clearly."
+st.title("Your Job Interview Preparation Coach")
+st.markdown(
+    "This is AI based job interview preparation coach which would help you crush your next interview. For the best experience and result paste the **job description** and your **CV/resume**. The coach will extract key requirements, "
+    "identify your strengths and weaknesses, and help you prepare for your interview."
 )
 
 col_overview, col_chat = st.columns([1, 2])

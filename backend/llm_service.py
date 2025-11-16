@@ -24,7 +24,7 @@ class MatchReport:
 class LLMService:
     """Simple wrapper around the OpenAI Responses API."""
 
-    def __init__(self, temperature: float = 0.1, model: str = "gpt-4o-mini") -> None:
+    def __init__(self, temperature: float = 0.5, model: str = "gpt-4o-mini") -> None:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise RuntimeError(
@@ -60,9 +60,18 @@ class LLMService:
 
     def extract_requirements(self, job_description: str) -> List[str]:
         prompt = (
-            "You are an assistant that reads job descriptions and lists the 3-6 most critical "
-            "skills, responsibilities, or qualifications that cannot be missed. Return only "
-            "a bullet list without commentary. Job description:\n" + job_description
+            """You are a recruiting analyst. From a job description extract required:
+            - hard skills
+            - soft skills
+            - experiences
+            
+            Rephrase extracted requirements in 2-3 words each. Be specific. List out top 7 that looks most important. 
+            Add brief explanation why you think so.
+
+            - Return only named requirements with brief explanation
+            - Return as a numbered list, starting each item on a new line
+            
+            Job description:\n""" + job_description
         )
         return _parse_bullets(self._call(prompt))
 
@@ -71,11 +80,15 @@ class LLMService:
     ) -> Tuple[List[str], List[str]]:
         requirements_blob = "\n".join(f"- {req}" for req in job_requirements)
         prompt = (
-            "Given the resume details below and the job requirements, highlight the key strengths "
-            "(skills or experiences that align with the job) and weaknesses (gaps, missing "
-            "experience, or areas to improve). Provide two bullet lists titled Strengths and "
-            "Weaknesses.\nJob requirements:\n"
-            f"{requirements_blob or '- Not available'}\n\nResume:\n{cv_text}"
+            f"""Given the resume details below and the job requirements, highlight the key strengths
+            (skills or experiences that align with the job) and weaknesses (gaps, missing
+            experience, or areas to improve). Each category should have up to 5 highlighted items, named in 2-3 words each.
+            
+            Revise items in both lists and look for contradictory findings such as same or similar skill or experience is in both categories. \
+            example. Strength - ERP/CRM Implementation experience, weakness - little ERP/CRM Implementation experience. 
+            
+            \nJob requirements:\n
+            {requirements_blob or '- Not available'}\n\nResume:\n{cv_text}"""
         )
         response = self._call(prompt)
         strengths = _extract_section(response, "strengths")
@@ -115,8 +128,27 @@ class LLMService:
         weaknesses: Iterable[str],
     ) -> str:
         system_prompt = (
-            "You are a concise interview preparation assistant. Keep answers short, specific, "
-            "and grounded in the candidate's experience. Avoid speculation."
+            """You are a job interview coach. You goal is to prepare user to crush job interview by preparing most likely \
+            questions and how to answer them correctly. Always ask clarifying questions when context is missing.
+            
+            First, prioritize a role play where you are hiring manager, and user is a candidate. \
+            Identify up to 5 most important requirements for the position and ask 2-3 questions for each. \
+            Provide questions one by one i.e. if user's answer requires follow-up question do it immediately. \
+            When answers looks complete, move to the next question.
+        
+            After role play, as a recruitment expert, give feedback on what was good in the answers and how to improve in order to nail during an interview. 
+            If user stops answering, do not create answers on behalf of him. But continue generate generating questions with possible answers from your expertise for the feedback.
+
+            Train user on how to highlight strengths, and how to cover weaknesses, include examples. When answering questions or providing feedback to user about \
+            his strengths, weaknesses and job related info, use original provided information in job description and/or CV, resume.
+
+            If user feels good about preparation and there's nothing more to help, generate a brief summary on key points \
+            from the discussion as a quick reminder. 
+
+            Do not respond if user uses any illegal or unetchical questions/answers ex. racist, xenophobic, gender related etc. 
+
+            If candidate is overqualified a lot, do not do role play. Just tell to the user that one is much overqualified. 
+            """
         )
         profile_context = _profile_blob(job_requirements, strengths, weaknesses)
         conversation: List[str] = []
