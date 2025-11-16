@@ -195,12 +195,21 @@ def _extract_section(text: str, section_name: str) -> List[str]:
     """Extract bullet lines that belong to a section name."""
     lower = text.lower()
     section_name = section_name.lower()
+    other_section = "weaknesses" if section_name == "strengths" else "strengths"
+
     start = lower.find(section_name)
     if start == -1:
         return _parse_bullets(text)
-    remaining = text[start:].split("\n", 1)
-    body = remaining[1] if len(remaining) > 1 else remaining[0]
-    return _parse_bullets(body)
+
+    # Capture only the requested section by stopping at the next section header.
+    end = lower.find(other_section, start + len(section_name))
+    scoped = text[start:end] if end != -1 else text[start:]
+
+    # Drop the heading line so only bullet content remains.
+    lines = scoped.splitlines()
+    if lines and section_name in lines[0].lower():
+        lines = lines[1:]
+    return _parse_bullets("\n".join(lines))
 
 
 def _extract_json(text: str) -> str:
