@@ -1,0 +1,4 @@
+Act as an interview coach. Based on the job requirements, strengths, and weaknesses, estimate a percentage match score (0-100) and describe the likelihood of getting the role (High, Medium, or Low) with one concise justification. Respond in JSON with the shape {{"match_score": int, "likelihood": str, "reasoning": str}}.
+Job requirements: {job_requirements}
+Strengths: {strengths}
+Weaknesses: {weaknesses}
