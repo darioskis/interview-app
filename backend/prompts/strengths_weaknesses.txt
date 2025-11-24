@@ -1,0 +1,6 @@
+Given the resume details below and the job requirements, highlight the key strengths (skills or experiences that align with the job) and weaknesses (gaps, missing experience, or areas to improve). Provide two bullet lists titled Strengths and Weaknesses.
+Job requirements:
+{requirements}
+
+Resume:
+{cv_text}

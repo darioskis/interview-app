@@ -28,9 +28,14 @@ streamlit run streamlit_app.py
 - Displays insights, match score, and likelihood of success on the left panel.
 - Provides a chat assistant on the right panel to practice concise interview answers using a low-temperature LLM.
 
-## Customizing the chat system message
+## Customizing prompts
 
-The chat assistant always receives a system instruction so responses stay concise and grounded
-in the candidate profile. You can edit the wording of this instruction (or replace it with your
-own) in `backend/llm_service.py` inside `LLMService.chat_response`, where the `system_prompt`
-variable is defined and passed to the OpenAI Responses API.
+All LLM prompts live in `backend/prompts/` so you can edit behavior without touching Python code. Each file uses `{placeholder}` tokens that are filled at runtime:
+
+- `extract_requirements.txt` – job description analysis
+- `strengths_weaknesses.txt` – CV alignment highlights
+- `match_report.txt` – match score JSON request
+- `chat_system.txt` – system instruction applied to every chat reply
+- `chat_prompt.txt` – wraps the conversation and profile context
+
+If a prompt file is missing, the app falls back to a built-in default and logs a warning.
