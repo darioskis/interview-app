@@ -37,10 +37,10 @@ try:
 except RuntimeError as exc:
     st.error(str(exc))
 
-st.title("LLM Interview Preparation Coach")
-st.caption(
-    "Paste the job description and your CV/resume. The coach will extract key requirements, "
-    "identify your strengths and weaknesses, and help you answer interview questions clearly."
+st.title("Your Job Interview Preparation Coach")
+st.markdown(
+    "This is AI based job interview preparation coach which would help you crush your next interview. For the best experience and result paste the **job description** and your **CV/resume**. The coach will extract key requirements, "
+    "identify your strengths and weaknesses, and help you prepare for your interview."
 )
 
 col_overview, col_chat = st.columns([1, 2])
@@ -123,6 +123,8 @@ with col_chat:
                 st.session_state.job_requirements,
                 st.session_state.strengths,
                 st.session_state.weaknesses,
+                st.session_state.job_description,
+                st.session_state.cv_text
             )
         st.session_state.messages.append({"role": "assistant", "content": response})
         with st.chat_message("assistant"):
