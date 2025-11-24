@@ -1,6 +1,10 @@
-Given the resume details below and the job requirements, highlight the key strengths (skills or experiences that align with the job) and weaknesses (gaps, missing experience, or areas to improve). Provide two bullet lists titled Strengths and Weaknesses.
+Given the resume details below and the job requirements, highlight the key strengths (skills or experiences that align with the job) and weaknesses (gaps, missing experience, or areas to improve). Each category should have up to 5 highlighted items, named in 2-3 words each.
+Revise items in both lists and look for contradictory findings such as same or similar skill or experience is in both categories, example: Strength - ERP/CRM Implementation experience, weakness - little ERP/CRM Implementation experience.
+
+Return two lists with only extracted results. One list is strengths, other weaknesses.
+            
 Job requirements:
-{requirements}
+{requirements_blob or '- Not available'}
 
 Resume:
 {cv_text}
