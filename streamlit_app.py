@@ -7,6 +7,33 @@ load_dotenv()
 
 st.set_page_config(page_title="Interview Coach", layout="wide")
 
+# Keep the chat input visible, similar to ChatGPT's floating composer
+st.markdown(
+    """
+    <style>
+    div[data-testid="stChatInput"] {
+        position: sticky;
+        bottom: 0;
+        z-index: 1000;
+        background: linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.92) 35%,
+            rgba(255, 255, 255, 1) 100%
+        );
+        border-top: 1px solid #e6e6e6;
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+        backdrop-filter: blur(8px);
+    }
+    div[data-testid="stChatInput"] > div {
+        margin-top: 0 !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 if "messages" not in st.session_state:
     st.session_state.messages = [
         {
@@ -112,6 +139,9 @@ with col_chat:
             continue
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
+
+    # Add breathing room so the floating input doesn't cover the last reply
+    st.markdown("<div style='height: 80px'></div>", unsafe_allow_html=True)
 
     if prompt := st.chat_input("Ask for coaching or practice answering a question"):
         st.session_state.messages.append({"role": "user", "content": prompt})
