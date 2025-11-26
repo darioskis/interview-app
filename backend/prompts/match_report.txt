@@ -24,22 +24,22 @@ You must give a quick, structured view of how good the fit is.
 ### Output Requirements
 Return a **single JSON object** with this exact structure:
 
-{
+{{
   "match_score": <integer 0-100>,
   "likelihood": "<High|Medium|Low>",
   "reasoning": "<short explanation>"
-}
+}}
 
 - Do not wrap it in Markdown.
 - Do not add extra fields.
 - Do not add text before or after the JSON.
 
 ### Example Output
-{
+{{
   "match_score": 78,
   "likelihood": "High",
   "reasoning": "The candidate matches most technical and leadership requirements and has strong stakeholder skills. The main gaps are limited domain experience and no prior work in this specific industry."
-}
+}}
 
 ### Guardrails
 - If the lists are very short or unclear, choose a conservative score and mention the uncertainty in the reasoning.
