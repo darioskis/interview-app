@@ -11,13 +11,20 @@ from typing import Dict, Iterable, List, Tuple
 from dotenv import load_dotenv
 from openai import OpenAI
 
+from backend.config import (
+    OPENAI_MODEL,
+    OPENAI_TEMPERATURE,
+    OPENAI_TOP_P,
+    PROMPTS_DIR,
+    PROMPT_FILES,
+)
+
 load_dotenv()
 
 logger = logging.getLogger(__name__)
-PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
 
 
-PROMPT_DEFAULTS = {
+DEFAULT_PROMPTS = {
     "extract_requirements": (
         "You are an assistant that reads job descriptions and lists the 3-6 most "
         "critical skills, responsibilities, or qualifications that cannot be missed. "
@@ -44,6 +51,12 @@ PROMPT_DEFAULTS = {
     "chat_prompt": (
         "Profile context:\n{profile_context}\n\nConversation so far:\n{conversation}\nCoach:"
     ),
+    "chat_evaluator": (
+        "You are a senior interviewer evaluating candidate answers."
+        "You provide a quick and brief feedback on how well candidate answered question"
+        "You return score out of 10 and general feedback on good things and what to improve in an answer"
+        "This evaluation should be given after completion answering each question i.e. including follow up questions"
+    ),
 }
 
 
@@ -55,6 +68,10 @@ class MatchReport:
     likelihood: str
     reasoning: str
 
+class AnswerEvaluation:
+    score: int
+    summary: str
+    improvements: List[str]
 
 class LLMService:
     """Simple wrapper around the OpenAI Responses API."""
@@ -65,8 +82,9 @@ class LLMService:
             raise RuntimeError(
                 "OPENAI_API_KEY is not set. Create a .env file with the key before running the app."
             )
-        self.temperature = temperature
-        self.model = model
+        self.temperature = OPENAI_TEMPERATURE if temperature is None else float(temperature)
+        self.model = model or OPENAI_MODEL
+        self.top_p = OPENAI_TOP_P if top_p is None else float(top_p)
         self.client = OpenAI(api_key=api_key)
         self._prompts = _load_prompts()
 
@@ -90,6 +108,7 @@ class LLMService:
             response = self.client.responses.create(
                 model=self.model,
                 temperature=self.temperature,
+                top_p=self.top_p,
                 input=messages,
             )
             return _response_to_text(response)
@@ -155,8 +174,14 @@ class LLMService:
         job_requirements: Iterable[str],
         strengths: Iterable[str],
         weaknesses: Iterable[str],
+        job_description: str | None = None,
+        cv_text: str | None = None,
     ) -> str:
-        system_prompt = self._prompts["chat_system"].strip()
+        system_prompt_raw = self._prompts["chat_system"].strip()
+        system_prompt = system_prompt_raw.format(
+            job_description=job_description or "Not provided",
+            cv_text=cv_text or "Not provided",
+        )
         profile_context = _profile_blob(job_requirements, strengths, weaknesses)
         conversation: List[str] = []
         for msg in messages:
@@ -165,13 +190,39 @@ class LLMService:
             speaker = "Candidate" if msg["role"] == "user" else "Coach"
             conversation.append(f"{speaker}: {msg['content']}")
         prompt = self._prompts["chat_prompt"].format(
-            profile_context=profile_context, conversation="\n".join(conversation)
+            profile_context=profile_context, 
+            conversation="\n".join(conversation)
         )
         try:
             return self._call(prompt, system=system_prompt)
         except Exception as exc:  # pragma: no cover - defensive guardrail
             logger.exception("Failed to generate chat response: %s", exc)
             return "Sorry, I couldn't generate a reply right now."
+            
+    def evaluate_answer(self, question: str, answer: str) -> AnswerEvaluation | None:
+        """Evaluate a candidate's answer to a given question.
+
+        Returns an AnswerEvaluation or None if evaluation fails.
+        """
+        prompt = self._prompts["chat_evaluator"].format(
+            question=question or "Not provided",
+            answer=answer or "",
+        )
+        try:
+            raw = self._call(prompt)
+        except Exception as exc:
+            logger.exception("Answer evaluation LLM call failed: %s", exc)
+            return None
+
+        try:
+            data = _maybe_json(raw)
+            score = int(data.get("score", 0))
+            summary = str(data.get("summary", "")).strip()
+            improvements = [str(x).strip() for x in data.get("improvements", []) if str(x).strip()]
+            return AnswerEvaluation(score=score, summary=summary, improvements=improvements)
+        except Exception as exc:
+            logger.exception("Failed to parse answer evaluation JSON: %s; raw=%r", exc, raw)
+            return None
 
 
 def _response_to_text(response) -> str:
@@ -261,21 +312,21 @@ def _profile_blob(
         logger.exception("Failed to build profile blob: %s", exc)
         return "Job requirements: Not provided\nStrengths: Not available\nWeaknesses: Not available"
 
-
 def _load_prompts() -> Dict[str, str]:
     prompts: Dict[str, str] = {}
-    for key, default in PROMPT_DEFAULTS.items():
-        prompts[key] = _read_prompt_file(key, default)
+    for key, default in DEFAULT_PROMPTS.items():
+        filename = PROMPT_FILES.get(key, f"{key}.txt")
+        path = PROMPTS_DIR / filename
+        prompts[key] = _read_prompt_file(path, default)
     return prompts
 
 
-def _read_prompt_file(name: str, default: str) -> str:
-    path = PROMPTS_DIR / f"{name}.txt"
+def _read_prompt_file(path: Path, default: str) -> str:
     try:
         return path.read_text(encoding="utf-8")
     except FileNotFoundError:
         logger.warning("Prompt file %s missing; using default", path)
         return default
-    except Exception as exc:  # pragma: no cover - defensive guardrail
+    except Exception as exc:
         logger.exception("Failed to read prompt file %s: %s", path, exc)
         return default

@@ -143,19 +143,53 @@ with col_chat:
     # Add breathing room so the floating input doesn't cover the last reply
     st.markdown("<div style='height: 80px'></div>", unsafe_allow_html=True)
 
-    if prompt := st.chat_input("Ask for coaching or practice answering a question"):
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
-        with st.spinner("Thinking..."):
-            response = llm.chat_response(
-                st.session_state.messages,
-                st.session_state.job_requirements,
-                st.session_state.strengths,
-                st.session_state.weaknesses,
-                st.session_state.job_description,
-                st.session_state.cv_text
-            )
-        st.session_state.messages.append({"role": "assistant", "content": response})
-        with st.chat_message("assistant"):
-            st.markdown(response)
+    # Keep track of last assistant question (for evaluation context)
+    if "last_assistant_message" not in st.session_state:
+        st.session_state.last_assistant_message = ""
+
+    if prompt := st.chat_input("Answer or ask something about your interview prep"):
+        # Simple security guard – don't call API for obviously inappropriate content
+        banned_words = ["racist", "xenophobic", "illegal activity"]
+        if any(word in prompt.lower() for word in banned_words):
+            st.error("Your message contains inappropriate content. Please rephrase.")
+        else:
+            # Store user message
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            with st.chat_message("user"):
+                st.markdown(prompt)
+
+            # Evaluate the answer based on last assistant message (often the question)
+            last_question = st.session_state.last_assistant_message
+            evaluation = None
+            if last_question:
+                evaluation = llm.evaluate_answer(last_question, prompt)
+
+            # Get coach response
+            with st.spinner("Thinking..."):
+                response = llm.chat_response(
+                    st.session_state.messages,
+                    st.session_state.job_requirements,
+                    st.session_state.strengths,
+                    st.session_state.weaknesses,
+                    st.session_state.job_description,
+                    st.session_state.cv_text,
+                )
+
+            # Save assistant message (used as "last question" next time)
+            st.session_state.messages.append({"role": "assistant", "content": response})
+            st.session_state.last_assistant_message = response
+
+            # Render assistant response
+            with st.chat_message("assistant"):
+                st.markdown(response)
+
+                # If we managed to evaluate the user's answer, show it under the bot reply
+                if evaluation:
+                    st.markdown("---")
+                    st.markdown(f"**Answer rating:** {evaluation.score} / 10")
+                    if evaluation.summary:
+                        st.markdown(f"**Summary:** {evaluation.summary}")
+                    if evaluation.improvements:
+                        st.markdown("**How to improve your answer:**")
+                        for item in evaluation.improvements:
+                            st.markdown(f"- {item}")
