@@ -30,4 +30,3 @@ Below is the conversation so far between the Candidate and the Coach:
 ### Example Output
 Coach: That’s a solid example. I like that you mentioned the before/after numbers.  
 To dig deeper, how did you handle stakeholders who were resistant to this change?
-
