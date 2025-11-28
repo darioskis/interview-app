@@ -303,21 +303,38 @@ class LLMService:
             logger.exception("Failed to extract requirements: %s", exc)
             return [f"Error extracting requirements: {exc}"]
 
-    def extract_strengths_and_weaknesses(
+    def run_strengths_weaknesses_tool(
         self, cv_text: str, job_requirements: Iterable[str]
-    ) -> Tuple[List[str], List[str]]:
+    ) -> StrengthsWeaknesses:
+        """
+        Tool 2: Given CV text and job requirements, return strengths and weaknesses.
+        """
+
         requirements_blob = "\n".join(f"- {req}" for req in job_requirements)
         prompt = self._prompts["strengths_weaknesses"].format(
-            requirements=requirements_blob or "- Not available", cv_text=cv_text
+            requirements=requirements_blob or "- Not available",
+            cv_text=cv_text,
         )
         try:
             response = self._call(prompt)
             strengths = _extract_section(response, "strengths")
             weaknesses = _extract_section(response, "weaknesses")
-            return strengths, weaknesses
         except Exception as exc:  # pragma: no cover - defensive guardrail
-            logger.exception("Failed to extract strengths/weaknesses: %s", exc)
-            return [f"Error extracting strengths: {exc}"], [f"Error extracting weaknesses: {exc}"]
+            logger.exception("Failed to run strengths_weaknesses tool: %s", exc)
+            strengths = [f"Error extracting strengths: {exc}"]
+            weaknesses = [f"Error extracting weaknesses: {exc}"]
+
+        return StrengthsWeaknesses(strengths=strengths, weaknesses=weaknesses)
+
+    def extract_strengths_and_weaknesses(
+        self, cv_text: str, job_requirements: Iterable[str]
+    ) -> Tuple[List[str], List[str]]:
+        """
+        Backwards-compatible wrapper, used elsewhere in the code.
+        """
+
+        result = self.run_strengths_weaknesses_tool(cv_text, job_requirements)
+        return result.strengths, result.weaknesses
 
     def question_plan(self, role_title: str, role_type: str) -> QuestionPlan:
         """Map the role to a technical/soft-skill ratio and prompt guidance."""
