@@ -20,7 +20,7 @@ from backend.llm_service import LLMService, MatchReport, SoftSkillQuestion
 load_dotenv()
 
 
-def validate_text(name: str, text: str, max_len: int = 100) -> str | None:
+def validate_text(name: str, text: str, max_len: int = 7500) -> str | None:
     text = text or ""
     if len(text) > max_len:
         return f"{name} is too long ({len(text)} characters). Please shorten it."
