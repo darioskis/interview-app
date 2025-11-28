@@ -212,16 +212,19 @@ class LLMService:
             raise RuntimeError("LLM call failed") from exc
 
     def run_job_profile_tool(self, job_description: str) -> JobProfile:
-        """Tool 1: analyze a job description and return a structured job profile.
+        """
+        Tool 1: Analyze a job description and return structured job profile info.
 
-        If no job description is provided, return a generic default profile.
+        This version delegates the logic to `analyze_job_post`, which already:
+        - Uses the correct system + user prompts
+        - Uses JsonOutputParser
+        - Produces valid structured output
+        - Handles missing or malformed data safely
         """
 
         job_description = job_description or ""
         if not job_description.strip():
-            logger.info(
-                "run_job_profile_tool called with empty job_description, returning default profile."
-            )
+            logger.info("run_job_profile_tool: empty job_description, returning default.")
             return JobProfile(
                 role_title="Unknown role",
                 seniority="Regular Employee",
@@ -231,36 +234,15 @@ class LLMService:
 
         start = time.time()
         try:
-            prompt = _safe_format(
-                self._prompts["job_analysis"],
-                job_description=job_description,
-                format_instructions="",
-            )
-            raw = self._call(prompt)
-
-            try:
-                payload = json.loads(_extract_json(raw))
-            except Exception:  # pragma: no cover - defensive guardrail
-                logger.exception("Failed to parse job profile JSON, falling back.")
-                return JobProfile(
-                    role_title="Unknown role",
-                    seniority="Regular Employee",
-                    role_type="Non-technical",
-                    requirements=[],
-                )
-
-            role_title = str(payload.get("role_title", "")).strip() or "Unknown role"
-            seniority = str(payload.get("seniority", "")).strip() or "Regular Employee"
-            role_type = str(payload.get("role_type", "")).strip() or "Non-technical"
-            requirements = [
-                str(r).strip() for r in payload.get("requirements", []) if str(r).strip()
-            ]
+            result = self.analyze_job_post(job_description)
 
             return JobProfile(
-                role_title=role_title,
-                seniority=seniority,
-                role_type=role_type,
-                requirements=requirements,
+                role_title=result.role_title.strip() or "Unknown role",
+                seniority=result.seniority.strip() or "Regular Employee",
+                role_type=result.role_type.strip() or "Non-technical",
+                requirements=[
+                    r.strip() for r in result.requirements if isinstance(r, str) and r.strip()
+                ],
             )
         finally:
             duration = time.time() - start
