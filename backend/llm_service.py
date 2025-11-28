@@ -235,6 +235,9 @@ class LLMService:
         start = time.time()
         try:
             result = self.analyze_job_post(job_description)
+            if not result or not result.role_title.strip():
+                logger.warning("Job profile tool received empty analysis; falling back to heuristics.")
+                result = _fallback_job_analysis(job_description, self)
 
             return JobProfile(
                 role_title=result.role_title.strip() or "Unknown role",
@@ -1096,12 +1099,12 @@ def _normalize_role_type(raw: str | None, role_title: str | None = None) -> str:
 def _fallback_job_analysis(job_description: str, service: "LLMService") -> JobAnalysis:
     """Minimal extraction when structured parsing fails or omits role details.
 
-    Role title is intentionally left as "Role not detected" to avoid overriding
-    the value that should come from the job_analysis prompt. Seniority and
-    role type are still normalized from the description to keep downstream
-    logic working, and requirements are extracted via the existing prompt.
+    We apply lightweight heuristics to guess the role title (e.g., first short
+    line or explicit "Role:" prefix), normalize seniority and role type, and
+    reuse requirement extraction so downstream logic still has signal even if
+    the structured LLM call fails.
     """
-
+    role_title = _guess_role_title(job_description)
     seniority = _normalize_seniority(job_description)
     role_type = _normalize_role_type(None, job_description)
 
@@ -1112,8 +1115,27 @@ def _fallback_job_analysis(job_description: str, service: "LLMService") -> JobAn
         logger.exception("Fallback requirement extraction failed: %s", exc)
 
     return JobAnalysis(
-        role_title="Role not detected",
+        role_title=role_title or "Role not detected",
         seniority=seniority,
         role_type=role_type,
         requirements=requirements,
     )
+
+
+def _guess_role_title(job_description: str) -> str:
+    """Heuristically pull a plausible role title from the job description text."""
+
+    try:
+        lines = [line.strip(" -*\t") for line in job_description.splitlines() if line.strip()]
+        for line in lines:
+            lower = line.lower()
+            if any(lower.startswith(prefix) for prefix in ["job title", "role", "position"]):
+                candidate = line.split(":", 1)[-1].strip()
+                if candidate:
+                    return candidate
+            if 1 <= len(line.split()) <= 12:
+                return line
+    except Exception as exc:  # pragma: no cover - defensive guardrail
+        logger.exception("Role title guess failed: %s", exc)
+
+    return ""
