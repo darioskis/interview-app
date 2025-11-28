@@ -18,7 +18,7 @@ st.markdown(
 
     div[data-testid="stChatInput"] {
         position: fixed;
-        left: 0;
+        left: 300;
         right: 0;
         bottom: 0;
         z-index: 1000;
