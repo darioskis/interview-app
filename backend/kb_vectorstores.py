@@ -150,6 +150,7 @@ def build_role_ratio_vectorstore(
                     "category": ratio.category,
                     "technical_percentage": ratio.technical_percentage,
                     "soft_skill_percentage": ratio.soft_skill_percentage,
+                    "prompt_instruction": ratio.prompt_instruction,
                 },
             )
         )
