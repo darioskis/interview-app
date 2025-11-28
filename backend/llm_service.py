@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from pathlib import Path
@@ -213,33 +214,38 @@ class LLMService:
     def run_job_profile_tool(self, job_description: str) -> JobProfile:
         """Tool 1: analyze a job description and return a structured job profile."""
 
-        prompt = self._prompts["job_analysis"].format(job_description=job_description)
-        raw = self._call(prompt)
-
+        start = time.time()
         try:
-            payload = json.loads(_extract_json(raw))
-        except Exception:  # pragma: no cover - defensive guardrail
-            logger.exception("Failed to parse job profile JSON, falling back.")
+            prompt = self._prompts["job_analysis"].format(job_description=job_description)
+            raw = self._call(prompt)
+
+            try:
+                payload = json.loads(_extract_json(raw))
+            except Exception:  # pragma: no cover - defensive guardrail
+                logger.exception("Failed to parse job profile JSON, falling back.")
+                return JobProfile(
+                    role_title="Unknown role",
+                    seniority="Regular Employee",
+                    role_type="Non-technical",
+                    requirements=[],
+                )
+
+            role_title = str(payload.get("role_title", "")).strip() or "Unknown role"
+            seniority = str(payload.get("seniority", "")).strip() or "Regular Employee"
+            role_type = str(payload.get("role_type", "")).strip() or "Non-technical"
+            requirements = [
+                str(r).strip() for r in payload.get("requirements", []) if str(r).strip()
+            ]
+
             return JobProfile(
-                role_title="Unknown role",
-                seniority="Regular Employee",
-                role_type="Non-technical",
-                requirements=[],
+                role_title=role_title,
+                seniority=seniority,
+                role_type=role_type,
+                requirements=requirements,
             )
-
-        role_title = str(payload.get("role_title", "")).strip() or "Unknown role"
-        seniority = str(payload.get("seniority", "")).strip() or "Regular Employee"
-        role_type = str(payload.get("role_type", "")).strip() or "Non-technical"
-        requirements = [
-            str(r).strip() for r in payload.get("requirements", []) if str(r).strip()
-        ]
-
-        return JobProfile(
-            role_title=role_title,
-            seniority=seniority,
-            role_type=role_type,
-            requirements=requirements,
-        )
+        finally:
+            duration = time.time() - start
+            logger.info("Tool %s completed in %.2f seconds", "job_profile_tool", duration)
 
     def analyze_job_post(self, job_description: str) -> JobAnalysis | None:
         """Use LangChain to extract role metadata and requirements from a JD."""
@@ -310,21 +316,26 @@ class LLMService:
         Tool 2: Given CV text and job requirements, return strengths and weaknesses.
         """
 
-        requirements_blob = "\n".join(f"- {req}" for req in job_requirements)
-        prompt = self._prompts["strengths_weaknesses"].format(
-            requirements=requirements_blob or "- Not available",
-            cv_text=cv_text,
-        )
+        start = time.time()
         try:
-            response = self._call(prompt)
-            strengths = _extract_section(response, "strengths")
-            weaknesses = _extract_section(response, "weaknesses")
-        except Exception as exc:  # pragma: no cover - defensive guardrail
-            logger.exception("Failed to run strengths_weaknesses tool: %s", exc)
-            strengths = [f"Error extracting strengths: {exc}"]
-            weaknesses = [f"Error extracting weaknesses: {exc}"]
+            requirements_blob = "\n".join(f"- {req}" for req in job_requirements)
+            prompt = self._prompts["strengths_weaknesses"].format(
+                requirements=requirements_blob or "- Not available",
+                cv_text=cv_text,
+            )
+            try:
+                response = self._call(prompt)
+                strengths = _extract_section(response, "strengths")
+                weaknesses = _extract_section(response, "weaknesses")
+            except Exception as exc:  # pragma: no cover - defensive guardrail
+                logger.exception("Failed to run strengths_weaknesses tool: %s", exc)
+                strengths = [f"Error extracting strengths: {exc}"]
+                weaknesses = [f"Error extracting weaknesses: {exc}"]
 
-        return StrengthsWeaknesses(strengths=strengths, weaknesses=weaknesses)
+            return StrengthsWeaknesses(strengths=strengths, weaknesses=weaknesses)
+        finally:
+            duration = time.time() - start
+            logger.info("Tool %s completed in %.2f seconds", "strengths_weaknesses_tool", duration)
 
     def extract_strengths_and_weaknesses(
         self, cv_text: str, job_requirements: Iterable[str]
@@ -526,26 +537,31 @@ class LLMService:
         - likelihood ("High" | "Medium" | "Low" | "Unknown")
         - reasoning (short explanation)
         """
-        prompt = self._prompts["match_report"].format(
-            job_requirements=list(job_requirements),
-            strengths=list(strengths),
-            weaknesses=list(weaknesses),
-        )
+        start = time.time()
         try:
-            raw = self._call(prompt)
-            try:
-                payload = json.loads(_extract_json(raw))
-            except json.JSONDecodeError:
-                # Provide a safe fallback if the model returns unexpected format
-                return MatchReport(match_score=50, likelihood="Unknown", reasoning=raw[:200])
-            return MatchReport(
-                match_score=int(payload.get("match_score", 0)),
-                likelihood=str(payload.get("likelihood", "Unknown")),
-                reasoning=str(payload.get("reasoning", "")),
+            prompt = self._prompts["match_report"].format(
+                job_requirements=list(job_requirements),
+                strengths=list(strengths),
+                weaknesses=list(weaknesses),
             )
-        except Exception as exc:  # pragma: no cover - defensive guardrail
-            logger.exception("Failed to compute match report: %s", exc)
-            return MatchReport(match_score=0, likelihood="Unknown", reasoning=str(exc))
+            try:
+                raw = self._call(prompt)
+                try:
+                    payload = json.loads(_extract_json(raw))
+                except json.JSONDecodeError:
+                    # Provide a safe fallback if the model returns unexpected format
+                    return MatchReport(match_score=50, likelihood="Unknown", reasoning=raw[:200])
+                return MatchReport(
+                    match_score=int(payload.get("match_score", 0)),
+                    likelihood=str(payload.get("likelihood", "Unknown")),
+                    reasoning=str(payload.get("reasoning", "")),
+                )
+            except Exception as exc:  # pragma: no cover - defensive guardrail
+                logger.exception("Failed to compute match report: %s", exc)
+                return MatchReport(match_score=0, likelihood="Unknown", reasoning=str(exc))
+        finally:
+            duration = time.time() - start
+            logger.info("Tool %s completed in %.2f seconds", "match_report_tool", duration)
 
     def chat_response(
         self,
@@ -640,52 +656,57 @@ class LLMService:
         }
         """
 
-        requirements_blob = "\n".join(f"- {r}" for r in job_requirements)
-        prompt = self._prompts["chat_evaluator"].format(
-            question=question,
-            answer=answer,
-            requirements=requirements_blob or "- Not available",
-        )
-
+        start = time.time()
         try:
-            raw = self._call(prompt)
-        except Exception as exc:  # pragma: no cover - defensive guardrail
-            logger.exception("Answer evaluation LLM call failed: %s", exc)
+            requirements_blob = "\n".join(f"- {r}" for r in job_requirements)
+            prompt = self._prompts["chat_evaluator"].format(
+                question=question,
+                answer=answer,
+                requirements=requirements_blob or "- Not available",
+            )
+
+            try:
+                raw = self._call(prompt)
+            except Exception as exc:  # pragma: no cover - defensive guardrail
+                logger.exception("Answer evaluation LLM call failed: %s", exc)
+                return AnswerEvaluation(
+                    question=question or "",
+                    answer=answer or "",
+                    score=50,
+                    summary="Evaluation failed",
+                    improvements=[],
+                )
+
+            try:
+                payload = json.loads(_extract_json(raw))
+            except Exception as exc:  # pragma: no cover - defensive guardrail
+                logger.exception("Failed to parse answer evaluation JSON: %s", exc)
+                return AnswerEvaluation(
+                    question=question or "",
+                    answer=answer or "",
+                    score=50,
+                    summary=raw[:200],
+                    improvements=[],
+                )
+
+            score = int(payload.get("score", 0))
+            summary = str(payload.get("summary", "")).strip()
+            improvements = [
+                str(item).strip()
+                for item in payload.get("improvements", [])
+                if str(item).strip()
+            ]
+
             return AnswerEvaluation(
                 question=question or "",
                 answer=answer or "",
-                score=50,
-                summary="Evaluation failed",
-                improvements=[],
+                score=score,
+                summary=summary,
+                improvements=improvements,
             )
-
-        try:
-            payload = json.loads(_extract_json(raw))
-        except Exception as exc:  # pragma: no cover - defensive guardrail
-            logger.exception("Failed to parse answer evaluation JSON: %s", exc)
-            return AnswerEvaluation(
-                question=question or "",
-                answer=answer or "",
-                score=50,
-                summary=raw[:200],
-                improvements=[],
-            )
-
-        score = int(payload.get("score", 0))
-        summary = str(payload.get("summary", "")).strip()
-        improvements = [
-            str(item).strip()
-            for item in payload.get("improvements", [])
-            if str(item).strip()
-        ]
-
-        return AnswerEvaluation(
-            question=question or "",
-            answer=answer or "",
-            score=score,
-            summary=summary,
-            improvements=improvements,
-        )
+        finally:
+            duration = time.time() - start
+            logger.info("Tool %s completed in %.2f seconds", "answer_evaluator_tool", duration)
 
     def evaluate_answer(
         self, question: str, answer: str, job_requirements: Iterable[str] | None = None
