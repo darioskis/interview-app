@@ -1,12 +1,8 @@
-import csv
-import io
-import json
 import logging
 import time
 
 import streamlit as st
 from dotenv import load_dotenv
-from fpdf import FPDF
 
 logging.basicConfig(
     level=logging.INFO,
@@ -118,51 +114,6 @@ if "last_evaluation" not in st.session_state:
     st.session_state.last_evaluation = None
 if "api_calls" not in st.session_state:
     st.session_state.api_calls = []
-
-
-def _conversation_records(include_system: bool = False) -> list[dict]:
-    records: list[dict] = []
-    for idx, message in enumerate(st.session_state.messages):
-        if (not include_system) and message.get("role") == "system":
-            continue
-        records.append(
-            {
-                "id": idx + 1,
-                "role": message.get("role", ""),
-                "message": message.get("content", ""),
-            }
-        )
-    return records
-
-
-def _conversation_json(records: list[dict]) -> bytes:
-    return json.dumps(records, indent=2, ensure_ascii=False).encode("utf-8")
-
-
-def _conversation_csv(records: list[dict]) -> bytes:
-    buffer = io.StringIO()
-    writer = csv.writer(buffer)
-    writer.writerow(["id", "role", "message"])
-    for row in records:
-        writer.writerow([row.get("id", ""), row.get("role", ""), row.get("message", "")])
-    return buffer.getvalue().encode("utf-8")
-
-
-def _conversation_pdf(records: list[dict]) -> bytes:
-    pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    pdf.cell(0, 10, "Conversation History", ln=True)
-    pdf.ln(5)
-    for row in records:
-        header = f"#{row.get('id', '')} - {row.get('role', '').title()}"
-        pdf.set_font("Arial", style="B", size=11)
-        pdf.multi_cell(0, 8, header)
-        pdf.set_font("Arial", size=11)
-        pdf.multi_cell(0, 8, str(row.get("message", "")))
-        pdf.ln(2)
-    return pdf.output(dest="S").encode("latin1")
 
 llm = None
 try:
@@ -351,33 +302,6 @@ with col_chat:
     st.subheader("Interview chat")
     if llm is None:
         st.stop()
-
-    export_records = _conversation_records()
-    st.markdown("### Export conversation history")
-    if export_records:
-        st.download_button(
-            "Download JSON",
-            _conversation_json(export_records),
-            file_name="conversation.json",
-            mime="application/json",
-            use_container_width=True,
-        )
-        st.download_button(
-            "Download CSV",
-            _conversation_csv(export_records),
-            file_name="conversation.csv",
-            mime="text/csv",
-            use_container_width=True,
-        )
-        st.download_button(
-            "Download PDF",
-            _conversation_pdf(export_records),
-            file_name="conversation.pdf",
-            mime="application/pdf",
-            use_container_width=True,
-        )
-    else:
-        st.info("Conversation history will appear here once you start chatting.")
 
     total_messages = len(st.session_state.messages)
     for idx, message in enumerate(st.session_state.messages):
