@@ -19,7 +19,7 @@ st.markdown(
     div[data-testid="stChatInput"] {
         position: fixed;
         left: 35%;
-        right: 0;
+        right: 3%;
         bottom: 0;
         z-index: 1000;
         background: linear-gradient(
