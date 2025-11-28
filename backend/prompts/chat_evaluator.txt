@@ -19,7 +19,7 @@ The goal is to provide a quick, structured evaluation to help the candidate impr
 ### Output Requirements
 Return a **strict JSON object** with this exact structure:
 
-{
+{{
   "score": <integer 1-10>,
   "summary": "<1-2 sentence summary>",
   "improvements": [
@@ -27,14 +27,14 @@ Return a **strict JSON object** with this exact structure:
     "<short actionable suggestion 2>",
     "<short actionable suggestion 3>"
   ]
-}
+}}
 
 - No Markdown.
 - No additional keys.
 - No text before or after the JSON.
 
 ### Example Output
-{
+{{
   "score": 7,
   "summary": "The answer shows relevant experience and some impact, but lacks concrete metrics and a clear structure.",
   "improvements": [
@@ -42,7 +42,7 @@ Return a **strict JSON object** with this exact structure:
     "Add at least one before/after metric to show impact.",
     "State your specific role and decisions more explicitly."
   ]
-}
+}}
 
 ### Guardrails
 - Be honest but supportive and focused on growth.

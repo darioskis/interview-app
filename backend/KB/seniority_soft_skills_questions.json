@@ -16,5 +16,707 @@
     "seniority_level": "Regular Employee",
     "soft_skill": "Time Management",
     "question": "Walk me through your process for prioritizing tasks when everything seems urgent."
+  },
+  {
+    "id": 4,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Accountability",
+    "question": "Describe a specific mistake you made in your last role. How did you communicate it to your team?"
+  },
+  {
+    "id": 5,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Collaboration",
+    "question": "Give an example of a time you had to work with a colleague whose personality was very different from yours."
+  },
+  {
+    "id": 6,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Communication",
+    "question": "Describe a time you had to explain a technical issue to a non-technical stakeholder. How did you ensure they understood?"
+  },
+  {
+    "id": 7,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Initiative",
+    "question": "Tell me about a time you saw a problem that wasn't your responsibility but you fixed it anyway."
+  },
+  {
+    "id": 8,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Resilience",
+    "question": "Describe a time you received tough feedback on a deliverable. What was your immediate reaction and subsequent action?"
+  },
+  {
+    "id": 9,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Problem Solving",
+    "question": "Tell me about a time you were stuck on a problem without immediate help available. What steps did you take to unblock yourself?"
+  },
+  {
+    "id": 10,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Growth Mindset",
+    "question": "Describe a new skill or tool you had to learn quickly for a project. How did you approach the learning curve?"
+  },
+  {
+    "id": 11,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Dependability",
+    "question": "Tell me about a time you realized you wouldn't be able to meet a deadline. When and how did you communicate this?"
+  },
+  {
+    "id": 12,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Ambiguity",
+    "question": "Describe a situation where the instructions you were given were vague. How did you proceed?"
+  },
+  {
+    "id": 13,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Empathy",
+    "question": "Tell me about a time you helped a coworker who was struggling with their workload or a personal issue."
+  },
+  {
+    "id": 14,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Attention to Detail",
+    "question": "Describe a time you caught a critical error in your own work or someone else's before it went to production."
+  },
+  {
+    "id": 15,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Negotiation",
+    "question": "Have you ever had to negotiate a timeline with your manager? How did you present your case?"
+  },
+  {
+    "id": 16,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Ethics/Integrity",
+    "question": "Describe a time you felt pressured to cut corners. How did you handle it?"
+  },
+  {
+    "id": 17,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Customer Focus",
+    "question": "Tell me about a time you went above and beyond to solve a user's or client's problem."
+  },
+  {
+    "id": 18,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Receiving Feedback",
+    "question": "What is the most useful piece of constructive criticism you have ever received, and how did it change how you work?"
+  },
+  {
+    "id": 19,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Focus",
+    "question": "How do you handle interruptions or distractions when you are trying to do deep work?"
+  },
+  {
+    "id": 20,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Resourcefulness",
+    "question": "Tell me about a time you had to achieve a goal with very limited resources or documentation."
+  },
+  {
+    "id": 21,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Curiosity",
+    "question": "What is a recent industry trend you've been reading about, and how do you think it applies to our work?"
+  },
+  {
+    "id": 22,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Self-Motivation",
+    "question": "Describe a time you had to work on a task you found tedious or uninteresting. How did you keep yourself motivated?"
+  },
+  {
+    "id": 23,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Team Dynamics",
+    "question": "What role do you typically take in a team setting? The planner, the executor, the critic? Give an example."
+  },
+  {
+    "id": 24,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Stress Management",
+    "question": "Describe a high-pressure situation you faced recently. How did you manage your stress levels to stay productive?"
+  },
+  {
+    "id": 25,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Constructive Criticism",
+    "question": "Tell me about a time you had to give feedback to a peer. How did you frame it so it was well-received?"
+  },
+  {
+    "id": 26,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Goal Setting",
+    "question": "How do you track your own progress on long-term tasks without a manager checking in constantly?"
+  },
+  {
+    "id": 27,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Inclusivity",
+    "question": "Describe a time you made an effort to include someone in a discussion who was being overlooked."
+  },
+  {
+    "id": 28,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Presentation",
+    "question": "Tell me about a time you had to present your work to the team. How did you prepare?"
+  },
+  {
+    "id": 29,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Ownership",
+    "question": "Describe a time a project failed. Did you feel responsible? What did you do?"
+  },
+  {
+    "id": 30,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Patience",
+    "question": "Tell me about a time you had to wait on others to complete their work before you could start yours. How did you utilize that time?"
+  },
+  {
+    "id": 31,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Mentorship",
+    "question": "How do you tailor your mentoring style for a junior who is very shy versus one who is overconfident?"
+  },
+  {
+    "id": 32,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Delegation",
+    "question": "Describe a time you delegated a task and it went wrong. How did you handle the fallout and the learning opportunity?"
+  },
+  {
+    "id": 33,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Prioritization",
+    "question": "The Product Owner wants Feature A, but your team needs to fix Technical Debt B. How do you handle this negotiation?"
+  },
+  {
+    "id": 34,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Conflict Resolution",
+    "question": "Two senior members of your team are in a deadlock over an architectural decision. How do you intervene?"
+  },
+  {
+    "id": 35,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Motivation",
+    "question": "Your team has been working late hours for two weeks to hit a deadline. How do you keep morale up?"
+  },
+  {
+    "id": 36,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Onboarding",
+    "question": "Walk me through your process for a new hire's first week. How do you measure if their onboarding is successful?"
+  },
+  {
+    "id": 37,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Upward Communication",
+    "question": "You realize a committed deadline is impossible to meet. How and when do you break this news to management?"
+  },
+  {
+    "id": 38,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Feedback",
+    "question": "Describe a 1:1 meeting where you had to address a behavioral issue (e.g., lateness or negativity) with a team member."
+  },
+  {
+    "id": 39,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Decision Making",
+    "question": "Tell me about a technical decision you made that was unpopular with the team. Why did you make it and how did you explain it?"
+  },
+  {
+    "id": 40,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Team Cohesion",
+    "question": "How do you integrate a remote team member to ensure they don't feel isolated from the on-site team?"
+  },
+  {
+    "id": 41,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Project Management",
+    "question": "How do you estimate timelines for your team? How do you account for the 'unknowns'?"
+  },
+  {
+    "id": 42,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Empathy",
+    "question": "A team member's performance drops due to burnout. How do you support them while still ensuring the work gets done?"
+  },
+  {
+    "id": 43,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Adaptability",
+    "question": "Management pivots the product strategy overnight. How do you communicate this to a frustrated team?"
+  },
+  {
+    "id": 44,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Influence",
+    "question": "How do you convince a stakeholder to drop a requirement that you know will result in a bad user experience?"
+  },
+  {
+    "id": 45,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Accountability",
+    "question": "Your team shipped a bug that caused downtime. How do you handle the post-mortem without blame-shifting?"
+  },
+  {
+    "id": 46,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Hiring",
+    "question": "When interviewing candidates for your team, what non-technical trait is a 'must-have' for you?"
+  },
+  {
+    "id": 47,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Process Improvement",
+    "question": "Describe a process in your last team that was broken (e.g., QA bottlenecks). How did you fix it?"
+  },
+  {
+    "id": 48,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Patience",
+    "question": "How do you handle a team member who asks the same questions repeatedly despite being coached?"
+  },
+  {
+    "id": 49,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Cross-Functional Work",
+    "question": "Describe a time you had to coordinate a release with another team (e.g., DevOps or Frontend). How did you manage dependencies?"
+  },
+  {
+    "id": 50,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Transparency",
+    "question": "How much information about company struggles do you share with your team? Where do you draw the line?"
+  },
+  {
+    "id": 51,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Goal Alignment",
+    "question": "How do you ensure your team members' personal career goals are aligned with their daily tasks?"
+  },
+  {
+    "id": 52,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Focus",
+    "question": "As a lead, you are often interrupted. How do you balance 'maker time' (coding) vs 'manager time' (meetings)?"
+  },
+  {
+    "id": 53,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Celebration",
+    "question": "How do you recognize and reward success in your team beyond standard bonuses?"
+  },
+  {
+    "id": 54,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Crisis Management",
+    "question": "During a critical incident, how do you manage the communication flow so the engineers fixing the issue aren't swarmed?"
+  },
+  {
+    "id": 55,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Diplomacy",
+    "question": "How do you say 'no' to a request from a superior without sounding uncooperative?"
+  },
+  {
+    "id": 56,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Knowledge Sharing",
+    "question": "How do you prevent knowledge silos where only one person knows how a specific module works?"
+  },
+  {
+    "id": 57,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Trust Building",
+    "question": "You take over a new team that is skeptical of leadership. How do you build trust in your first 30 days?"
+  },
+  {
+    "id": 58,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Ego Management",
+    "question": "How do you handle a 'Rockstar' developer who is brilliant but toxic to the team culture?"
+  },
+  {
+    "id": 59,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Vision (Micro)",
+    "question": "How do you explain the 'big picture' of a feature to a developer who only cares about the code implementation?"
+  },
+  {
+    "id": 60,
+    "seniority_level": "Team Lead",
+    "soft_skill": "Resilience",
+    "question": "Describe a time your team failed to deliver. How did you shield them from excessive fallout while ensuring accountability?"
+  },
+  {
+    "id": 61,
+    "seniority_level": "Manager",
+    "soft_skill": "Performance Management",
+    "question": "Describe a time you had to put an employee on a Performance Improvement Plan (PIP). Did they survive it? Why or why not?"
+  },
+  {
+    "id": 62,
+    "seniority_level": "Manager",
+    "soft_skill": "Hiring Strategy",
+    "question": "We need to scale the team from 5 to 15 in 3 months. Walk me through your hiring strategy to maintain quality."
+  },
+  {
+    "id": 63,
+    "seniority_level": "Manager",
+    "soft_skill": "Firing",
+    "question": "Walk me through the decision-making process and execution of letting an employee go. How did you handle the team's reaction?"
+  },
+  {
+    "id": 64,
+    "seniority_level": "Manager",
+    "soft_skill": "Resource Allocation",
+    "question": "You have 3 critical projects and budget for only 2. How do you decide what gets cut?"
+  },
+  {
+    "id": 65,
+    "seniority_level": "Manager",
+    "soft_skill": "Change Management",
+    "question": "The company is undergoing a major reorg. How do you keep your team focused and reduce anxiety?"
+  },
+  {
+    "id": 66,
+    "seniority_level": "Manager",
+    "soft_skill": "Conflict Resolution (Inter-team)",
+    "question": "Your team is blaming the Sales team for over-promising, and Sales is blaming your team for missing dates. How do you fix this relationship?"
+  },
+  {
+    "id": 67,
+    "seniority_level": "Manager",
+    "soft_skill": "Stakeholder Management",
+    "question": "A VP demands a feature release by Friday that you know is impossible. How do you handle this conversation?"
+  },
+  {
+    "id": 68,
+    "seniority_level": "Manager",
+    "soft_skill": "Career Development",
+    "question": "How do you handle a high-performer who wants a promotion that you cannot offer right now due to budget/headcount?"
+  },
+  {
+    "id": 69,
+    "seniority_level": "Manager",
+    "soft_skill": "Delegation (to Leads)",
+    "question": "How do you distinguish between what you should manage yourself and what you should delegate to your Team Leads?"
+  },
+  {
+    "id": 70,
+    "seniority_level": "Manager",
+    "soft_skill": "Strategic Planning",
+    "question": "How do you translate the company's annual OKRs into actionable goals for your specific department?"
+  },
+  {
+    "id": 71,
+    "seniority_level": "Manager",
+    "soft_skill": "Culture Building",
+    "question": "How do you measure the 'health' of your team's culture? What specific metrics or signals do you look for?"
+  },
+  {
+    "id": 72,
+    "seniority_level": "Manager",
+    "soft_skill": "Diversity & Inclusion",
+    "question": "What concrete steps have you taken in previous roles to ensure a diverse candidate pipeline?"
+  },
+  {
+    "id": 73,
+    "seniority_level": "Manager",
+    "soft_skill": "Retention",
+    "question": "You notice a key employee seems disengaged. What is your intervention strategy before they resign?"
+  },
+  {
+    "id": 74,
+    "seniority_level": "Manager",
+    "soft_skill": "Crisis Communication",
+    "question": "A major security breach or data loss has occurred. Walk me through your communication plan for the first 24 hours."
+  },
+  {
+    "id": 75,
+    "seniority_level": "Manager",
+    "soft_skill": "Budgeting",
+    "question": "Describe a time you had to defend your department's budget against proposed cuts."
+  },
+  {
+    "id": 76,
+    "seniority_level": "Manager",
+    "soft_skill": "Influence without Authority",
+    "question": "How do you get buy-in for a new tool or process from other managers who don't report to you?"
+  },
+  {
+    "id": 77,
+    "seniority_level": "Manager",
+    "soft_skill": "Remote Management",
+    "question": "How does your management style differ for fully remote employees versus in-office employees?"
+  },
+  {
+    "id": 78,
+    "seniority_level": "Manager",
+    "soft_skill": "Emotional Intelligence",
+    "question": "Describe a time you lost your temper or acted emotionally at work. How did you recover and repair the damage?"
+  },
+  {
+    "id": 79,
+    "seniority_level": "Manager",
+    "soft_skill": "Succession Planning",
+    "question": "If you were hit by a bus tomorrow, is there someone ready to take your place? How have you prepared them?"
+  },
+  {
+    "id": 80,
+    "seniority_level": "Manager",
+    "soft_skill": "Innovation",
+    "question": "How do you create space for innovation (e.g., hackathons, R&D) when the backlog is full of maintenance work?"
+  },
+  {
+    "id": 81,
+    "seniority_level": "Manager",
+    "soft_skill": "Handling Failure",
+    "question": "Describe a project under your management that failed. How did you explain the ROI loss to the executives?"
+  },
+  {
+    "id": 82,
+    "seniority_level": "Manager",
+    "soft_skill": "Negotiation (Salary)",
+    "question": "A candidate you really want demands a salary 20% over your budget cap. How do you handle the negotiation?"
+  },
+  {
+    "id": 83,
+    "seniority_level": "Manager",
+    "soft_skill": "Organizational Politics",
+    "question": "Describe a time you had to navigate office politics to protect your team from a bad decision made by upper leadership."
+  },
+  {
+    "id": 84,
+    "seniority_level": "Manager",
+    "soft_skill": "Process Scaling",
+    "question": "A process that worked for 10 people is breaking now that you have 50. How do you identify and fix the bottleneck?"
+  },
+  {
+    "id": 85,
+    "seniority_level": "Manager",
+    "soft_skill": "Ethics",
+    "question": "You discover a high-performer has violated a company policy (non-critical). How do you handle it?"
+  },
+  {
+    "id": 86,
+    "seniority_level": "Manager",
+    "soft_skill": "Customer Empathy",
+    "question": "How do you ensure your engineering/backend team stays connected to the actual customer pain points?"
+  },
+  {
+    "id": 87,
+    "seniority_level": "Manager",
+    "soft_skill": "Burnout Prevention",
+    "question": "Your entire department is showing signs of fatigue after a long crunch. What immediate and long-term actions do you take?"
+  },
+  {
+    "id": 88,
+    "seniority_level": "Manager",
+    "soft_skill": "Self-Awareness",
+    "question": "What is the biggest misconception people have about your management style?"
+  },
+  {
+    "id": 89,
+    "seniority_level": "Manager",
+    "soft_skill": "Cross-Cultural Management",
+    "question": "Have you managed teams distributed across different time zones and cultures? What challenges did you face?"
+  },
+  {
+    "id": 90,
+    "seniority_level": "Manager",
+    "soft_skill": "Data-Driven Decisions",
+    "question": "Give an example of a decision you made based purely on data that contradicted your intuition."
+  },
+  {
+    "id": 91,
+    "seniority_level": "Director",
+    "soft_skill": "Vision Setting",
+    "question": "Where do you see our technology stack and team structure in 3 years? How do we get there?"
+  },
+  {
+    "id": 92,
+    "seniority_level": "Director",
+    "soft_skill": "Organizational Design",
+    "question": "We are merging two departments with very different cultures. What is your strategy for integrating them?"
+  },
+  {
+    "id": 93,
+    "seniority_level": "Director",
+    "soft_skill": "Financial Acumen",
+    "question": "We need to cut OpEx by 15% next quarter. Walk me through how you analyze your P&L to find those savings."
+  },
+  {
+    "id": 94,
+    "seniority_level": "Director",
+    "soft_skill": "Executive Presence",
+    "question": "Describe a time you had to deliver bad news to the Board of Directors. How did you frame it?"
+  },
+  {
+    "id": 95,
+    "seniority_level": "Director",
+    "soft_skill": "Managing Managers",
+    "question": "How do you evaluate the performance of a Manager differently than an Individual Contributor?"
+  },
+  {
+    "id": 96,
+    "seniority_level": "Director",
+    "soft_skill": "Strategic Influence",
+    "question": "The CEO wants to pursue a market opportunity you believe is a distraction. How do you convince them otherwise?"
+  },
+  {
+    "id": 97,
+    "seniority_level": "Director",
+    "soft_skill": "Change Leadership",
+    "question": "Describe a time you had to pivot the entire organization's focus (e.g., from B2C to B2B). How did you manage the transition?"
+  },
+  {
+    "id": 98,
+    "seniority_level": "Director",
+    "soft_skill": "Talent Density",
+    "question": "How do you ensure we are raising the bar for talent across the entire organization, not just in isolated teams?"
+  },
+  {
+    "id": 99,
+    "seniority_level": "Director",
+    "soft_skill": "Risk Management",
+    "question": "How do you assess 'Build vs. Buy' for mission-critical infrastructure? Give a past example."
+  },
+  {
+    "id": 100,
+    "seniority_level": "Director",
+    "soft_skill": "Cultural Transformation",
+    "question": "You identify a toxic subculture in a high-performing division. How do you dismantle it without destroying productivity?"
+  },
+  {
+    "id": 101,
+    "seniority_level": "Director",
+    "soft_skill": "Business Alignment",
+    "question": "How do you demonstrate the ROI of technical debt reduction to a non-technical CFO?"
+  },
+  {
+    "id": 102,
+    "seniority_level": "Director",
+    "soft_skill": "Succession Planning (Exec)",
+    "question": "Who are your top 3 leaders right now? If you left today, which one takes your role and what coaching do they still need?"
+  },
+  {
+    "id": 103,
+    "seniority_level": "Director",
+    "soft_skill": "Innovation Strategy",
+    "question": "How do you structure the organization to ensure we don't get 'Innovator's Dilemma' and disrupted by a startup?"
+  },
+  {
+    "id": 104,
+    "seniority_level": "Director",
+    "soft_skill": "Crisis Leadership",
+    "question": "The company is facing a PR nightmare due to a technical failure. How do you lead the internal morale recovery?"
+  },
+  {
+    "id": 105,
+    "seniority_level": "Director",
+    "soft_skill": "Global Strategy",
+    "question": "We want to open an engineering hub in a new country. What factors do you consider for location strategy?"
+  },
+  {
+    "id": 106,
+    "seniority_level": "Director",
+    "soft_skill": "Conflict Resolution (Exec)",
+    "question": "You and the VP of Product have fundamentally different visions for the roadmap. How do you resolve this at the executive level?"
+  },
+  {
+    "id": 107,
+    "seniority_level": "Director",
+    "soft_skill": "Decision Velocity",
+    "question": "How do you ensure your organization doesn't suffer from 'analysis paralysis' as it grows?"
+  },
+  {
+    "id": 108,
+    "seniority_level": "Director",
+    "soft_skill": "Compliance & Governance",
+    "question": "How do you balance the need for speed with the increasing burden of regulatory compliance (GDPR, SOC2)?"
+  },
+  {
+    "id": 109,
+    "seniority_level": "Director",
+    "soft_skill": "Scaling Culture",
+    "question": "We are doubling in size this year. What breaks first in our culture, and how are you preparing for it?"
+  },
+  {
+    "id": 110,
+    "seniority_level": "Director",
+    "soft_skill": "Operational Efficiency",
+    "question": "How do you identify when a department has become bloated and inefficient? What metrics do you track?"
+  },
+  {
+    "id": 111,
+    "seniority_level": "Director",
+    "soft_skill": "Vendor Management",
+    "question": "Describe a negotiation with a major vendor (e.g., AWS, Salesforce) where you saved the company significant money."
+  },
+  {
+    "id": 112,
+    "seniority_level": "Director",
+    "soft_skill": "Mentorship (Executive)",
+    "question": "How do you mentor your Managers to become Directors? What is the hardest skill for them to learn?"
+  },
+  {
+    "id": 113,
+    "seniority_level": "Director",
+    "soft_skill": "Communication Architecture",
+    "question": "How do you ensure information flows from the C-suite to the interns without getting distorted?"
+  },
+  {
+    "id": 114,
+    "seniority_level": "Director",
+    "soft_skill": "Resilience",
+    "question": "The market has turned, and we need to shelve a product division you spent 2 years building. How do you handle this personally and professionally?"
+  },
+  {
+    "id": 115,
+    "seniority_level": "Director",
+    "soft_skill": "Stakeholder Alignment",
+    "question": "How do you manage the expectations of the Board regarding the speed of AI adoption in our products?"
+  },
+  {
+    "id": 116,
+    "seniority_level": "Director",
+    "soft_skill": "Legacy Management",
+    "question": "We have a massive legacy system that is profitable but hated by devs. What is your long-term strategy for it?"
+  },
+  {
+    "id": 117,
+    "seniority_level": "Director",
+    "soft_skill": "Ethics (Systemic)",
+    "question": "How do you ensure our algorithms or products do not have inherent bias? What governance have you installed?"
+  },
+  {
+    "id": 118,
+    "seniority_level": "Director",
+    "soft_skill": "Network Building",
+    "question": "How do you leverage your external network to bring value (partnerships, recruiting) to the company?"
+  },
+  {
+    "id": 119,
+    "seniority_level": "Director",
+    "soft_skill": "Trust",
+    "question": "How do you build trust with a Founder who has 'Founder's Syndrome' and won't let go of control?"
+  },
+  {
+    "id": 120,
+    "seniority_level": "Director",
+    "soft_skill": "Vision",
+    "question": "If we gave you unlimited budget, what is the one moonshot project you would start for this company today?"
   }
 ]

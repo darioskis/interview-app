@@ -168,26 +168,26 @@ with col_overview:
 
     st.markdown("**Soft-skill focus**")
     if st.session_state.soft_skill_questions:
-        st.write("\n".join(f"• {q}" for q in st.session_state.soft_skill_questions))
+        st.write("\n".join(f"• {q}\n" for q in st.session_state.soft_skill_questions))
     else:
         st.info("Soft-skill prompts will show after role detection.")
 
     st.markdown("---")
     st.markdown("**Key job requirements**")
     if st.session_state.job_requirements:
-        st.write("\n".join(f"• {req}" for req in st.session_state.job_requirements))
+        st.write("\n".join(f"• {req}\n" for req in st.session_state.job_requirements))
     else:
         st.info("Provide the job description to extract requirements.")
 
     st.markdown("**Your strengths**")
     if st.session_state.strengths:
-        st.write("\n".join(f"• {item}" for item in st.session_state.strengths))
+        st.write("\n".join(f"• {item}\n" for item in st.session_state.strengths))
     else:
         st.info("Paste your CV/resume to identify strengths.")
 
     st.markdown("**Potential weaknesses**")
     if st.session_state.weaknesses:
-        st.write("\n".join(f"• {item}" for item in st.session_state.weaknesses))
+        st.write("\n".join(f"• {item}\n" for item in st.session_state.weaknesses))
     else:
         st.info("Weaknesses appear here once your CV is analyzed.")
 
