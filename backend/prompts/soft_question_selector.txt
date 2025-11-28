@@ -9,6 +9,7 @@ You are selecting soft-skill interview questions that best probe a candidate for
 
 ### Task
 Choose up to {max_questions} questions from the bank that best align with the requirements and seniority.
+Use the exact question text from the bank (no rewrites, IDs, or extra commentary).
 
 ### Output
 Return JSON only, following this schema:

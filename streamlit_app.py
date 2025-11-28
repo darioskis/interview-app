@@ -1,7 +1,7 @@
 import streamlit as st
 from dotenv import load_dotenv
 
-from backend.llm_service import LLMService, MatchReport
+from backend.llm_service import LLMService, MatchReport, SoftSkillQuestion
 
 load_dotenv()
 
@@ -168,7 +168,13 @@ with col_overview:
 
     st.markdown("**Soft-skill focus**")
     if st.session_state.soft_skill_questions:
-        st.write("\n".join(f"• {q}\n" for q in st.session_state.soft_skill_questions))
+        st.write(
+            "\n".join(
+                f"• ID-{getattr(q, 'id', '')}: {getattr(q, 'question', '')}"
+                f" ({getattr(q, 'soft_skill', '')})".rstrip()
+                for q in st.session_state.soft_skill_questions
+            )
+        )
     else:
         st.info("Soft-skill prompts will show after role detection.")
 
@@ -249,21 +255,21 @@ with col_chat:
                     role_type=st.session_state.role_type,
                 )
 
+            # Format assistant response with any evaluation so it persists in chat history
+            assistant_content = response
+            if evaluation:
+                eval_blocks = ["---", f"**Answer rating:** {evaluation.score} / 10"]
+                if evaluation.summary:
+                    eval_blocks.append(f"**Summary:** {evaluation.summary}")
+                if evaluation.improvements:
+                    eval_blocks.append("**How to improve your answer:**")
+                    eval_blocks.extend(f"- {item}" for item in evaluation.improvements)
+                assistant_content = "\n\n".join([response, "\n".join(eval_blocks)])
+
             # Save assistant message (used as "last question" next time)
-            st.session_state.messages.append({"role": "assistant", "content": response})
+            st.session_state.messages.append({"role": "assistant", "content": assistant_content})
             st.session_state.last_assistant_message = response
 
             # Render assistant response
             with st.chat_message("assistant"):
-                st.markdown(response)
-
-                # If we managed to evaluate the user's answer, show it under the bot reply
-                if evaluation:
-                    st.markdown("---")
-                    st.markdown(f"**Answer rating:** {evaluation.score} / 10")
-                    if evaluation.summary:
-                        st.markdown(f"**Summary:** {evaluation.summary}")
-                    if evaluation.improvements:
-                        st.markdown("**How to improve your answer:**")
-                        for item in evaluation.improvements:
-                            st.markdown(f"- {item}")
+                st.markdown(assistant_content)

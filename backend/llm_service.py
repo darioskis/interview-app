@@ -111,6 +111,15 @@ class QuestionPlan:
     prompt_instruction: str
     category: str = ""
 
+
+@dataclass
+class SoftSkillQuestion:
+    """Structured representation of a KB soft-skill interview question."""
+
+    id: str
+    soft_skill: str
+    question: str
+
 class LLMService:
     """Simple wrapper around the OpenAI Responses API."""
 
@@ -286,14 +295,17 @@ class LLMService:
 
     def select_soft_skill_questions(
         self, seniority: str, requirements: Iterable[str], max_questions: int = 3
-    ) -> List[str]:
+    ) -> List[SoftSkillQuestion]:
         """Choose soft-skill questions from the KB using LangChain guidance.
 
         The flow follows two filters in order:
         1) Filter by seniority (strict match to the four allowed levels).
         2) Rank the remaining questions by similarity between their soft_skill label
            and the extracted requirements (e.g., surfacing "Time Management" when
-           time management appears in requirements).
+           time management appears in requirements). If there is no relatively close match
+           between requirement and soft_skill label, then generate your own question for the requirement.
+        Returns rich question metadata (ID, soft skill, text) so the chat layer can
+        cite the originating KB item.
         """
 
         normalized_seniority = _normalize_seniority(seniority)
@@ -318,7 +330,7 @@ class LLMService:
         ranked_candidates = [item for _, item in scored_candidates]
 
         candidate_text = "\n".join(
-            f"- {c.get('soft_skill')}: {c.get('question')}" for c in ranked_candidates
+            f"- ID-{c.get('id', '')} | {c.get('soft_skill')}: {c.get('question')}" for c in ranked_candidates
         )
 
         class Selection(BaseModel):
@@ -340,21 +352,48 @@ class LLMService:
             parsed: Selection = chain.invoke(
                 {
                     "seniority": normalized_seniority or "Unknown",
-                    "requirements": ", ".join(requirements) or "Not provided",
+                    "requirements": ", ".join(requirement_list) or "Not provided",
                     "candidate_questions": candidate_text,
                     "max_questions": max_questions,
                 }
             )
             selected = [q.strip() for q in parsed.selected_questions if q.strip()]
             if selected:
-                return selected
+                mapped: List[SoftSkillQuestion] = []
+                for text in selected:
+                    match = next(
+                        (
+                            SoftSkillQuestion(
+                                id=str(c.get("id", "")).strip(),
+                                soft_skill=str(c.get("soft_skill", "")).strip(),
+                                question=str(c.get("question", "")).strip(),
+                            )
+                            for c in ranked_candidates
+                            if str(c.get("question", "")).strip() == text
+                        ),
+                        None,
+                    )
+                    if match:
+                        mapped.append(match)
+                if mapped:
+                    return mapped[:max_questions]
         except Exception as exc:  # pragma: no cover - defensive guardrail
             logger.exception("Soft-skill selection failed: %s", exc)
 
         # Fallback to the top N ranked candidates if parsing failed
-        return [
-            c.get("question", "") for c in ranked_candidates[:max_questions] if c.get("question")
-        ]
+        fallback: List[SoftSkillQuestion] = []
+        for c in ranked_candidates[:max_questions]:
+            question_text = str(c.get("question", "")).strip()
+            if not question_text:
+                continue
+            fallback.append(
+                SoftSkillQuestion(
+                    id=str(c.get("id", "")).strip(),
+                    soft_skill=str(c.get("soft_skill", "")).strip(),
+                    question=question_text,
+                )
+            )
+        return fallback
 
     def compute_match_report(
         self, job_requirements: Iterable[str], strengths: Iterable[str], weaknesses: Iterable[str]
@@ -389,7 +428,7 @@ class LLMService:
         strengths: Iterable[str],
         weaknesses: Iterable[str],
         question_plan: QuestionPlan | None = None,
-        soft_skill_questions: Iterable[str] | None = None,
+        soft_skill_questions: Iterable[SoftSkillQuestion] | None = None,
         job_description: str | None = None,
         cv_text: str | None = None,
         role_title: str | None = None,
@@ -411,8 +450,29 @@ class LLMService:
                 instruction=question_plan.prompt_instruction,
             )
         if soft_skill_questions:
-            joined_soft = "\n".join(f"• {q}" for q in soft_skill_questions)
-            system_prompt += "\nPrioritize these soft-skill prompts when relevant:\n" + joined_soft
+            formatted_soft = []
+            for q in soft_skill_questions:
+                soft_id = getattr(q, "id", "")
+                soft_skill = getattr(q, "soft_skill", "")
+                question_text = getattr(q, "question", "")
+                if not question_text:
+                    continue
+                label = f"ID-{soft_id}" if soft_id else "KB"
+                formatted_soft.append(f"• {label} | {soft_skill}: {question_text}")
+            if formatted_soft:
+                system_prompt += "\nPrioritize these soft-skill prompts when relevant:\n" + "\n".join(
+                    formatted_soft
+                )
+        system_prompt += (
+            "\nFor every new primary interview question you ask (not clarifying follow-ups), append a question "
+            "type tag at the end: [Technical] for hard-skill topics or [Non-technical] for behavioral/soft-skill topics."
+        )
+        if soft_skill_questions:
+            system_prompt += (
+                " When you use one of the listed soft-skill prompts as a primary question, tag it as [Non-technical] and "
+                "also add ' (Based on question ID-xx)' replacing xx with the provided ID. Do not add tags to follow-up "
+                "clarifiers."
+            )
         profile_context = _profile_blob(
             job_requirements,
             strengths,
