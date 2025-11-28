@@ -12,7 +12,7 @@ Return a JSON object with the following fields:
 - `role_type`: classify the position type as either `Technical` or `Non-technical`
 - `requirements`: 5–7 of the most important requirements, each 2–4 words.
 
-Keep the values concise and grounded only in the job description.
+Keep the values concise and based only on in the job description.
 
 ### Output
 Use this exact JSON schema:
