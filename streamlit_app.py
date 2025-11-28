@@ -237,7 +237,9 @@ with col_chat:
             last_question = st.session_state.last_assistant_message
             evaluation = None
             if last_question:
-                evaluation = llm.evaluate_answer(last_question, prompt)
+                evaluation = llm.evaluate_answer(
+                    last_question, prompt, st.session_state.job_requirements
+                )
 
             # Get coach response
             with st.spinner("Thinking..."):

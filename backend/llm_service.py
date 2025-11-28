@@ -4,6 +4,7 @@ from __future__ import annotations
 
 """Utility functions for interacting with the OpenAI API and knowledge-base-driven interview flows."""
 
+import json
 import logging
 import os
 from dataclasses import dataclass
@@ -40,6 +41,44 @@ from backend.kb_vectorstores import (
 load_dotenv()
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class JobProfile:
+    """Role details detected from the job post and requirements list."""
+
+    role_title: str
+    seniority: str
+    role_type: str
+    requirements: List[str]
+
+
+@dataclass
+class StrengthsWeaknesses:
+    """Grouped strengths and weaknesses extracted from a CV."""
+
+    strengths: List[str]
+    weaknesses: List[str]
+
+
+@dataclass
+class MatchReport:
+    """Structured information describing the job alignment."""
+
+    match_score: int
+    likelihood: str
+    reasoning: str
+
+
+@dataclass
+class AnswerEvaluation:
+    """Evaluation details for a candidate's answer to a question."""
+
+    question: str
+    answer: str
+    score: int
+    summary: str
+    improvements: List[str]
 
 
 DEFAULT_PROMPTS = {
@@ -88,22 +127,6 @@ DEFAULT_PROMPTS = {
         "\nSeniority: {seniority}\nRequirements: {requirements}\nCandidates:\n{candidate_questions}\n{format_instructions}"
     ),
 }
-
-
-@dataclass
-class MatchReport:
-    """Structured information describing the job alignment."""
-
-    match_score: int
-    likelihood: str
-    reasoning: str
-
-
-@dataclass
-class AnswerEvaluation:
-    score: int
-    summary: str
-    improvements: List[str]
 
 
 @dataclass
@@ -187,6 +210,37 @@ class LLMService:
             logger.exception("LLM prompt failed: %s", exc)
             raise RuntimeError("LLM call failed") from exc
 
+    def run_job_profile_tool(self, job_description: str) -> JobProfile:
+        """Tool 1: analyze a job description and return a structured job profile."""
+
+        prompt = self._prompts["job_analysis"].format(job_description=job_description)
+        raw = self._call(prompt)
+
+        try:
+            payload = json.loads(_extract_json(raw))
+        except Exception:  # pragma: no cover - defensive guardrail
+            logger.exception("Failed to parse job profile JSON, falling back.")
+            return JobProfile(
+                role_title="Unknown role",
+                seniority="Regular Employee",
+                role_type="Non-technical",
+                requirements=[],
+            )
+
+        role_title = str(payload.get("role_title", "")).strip() or "Unknown role"
+        seniority = str(payload.get("seniority", "")).strip() or "Regular Employee"
+        role_type = str(payload.get("role_type", "")).strip() or "Non-technical"
+        requirements = [
+            str(r).strip() for r in payload.get("requirements", []) if str(r).strip()
+        ]
+
+        return JobProfile(
+            role_title=role_title,
+            seniority=seniority,
+            role_type=role_type,
+            requirements=requirements,
+        )
+
     def analyze_job_post(self, job_description: str) -> JobAnalysis | None:
         """Use LangChain to extract role metadata and requirements from a JD."""
 
@@ -249,21 +303,38 @@ class LLMService:
             logger.exception("Failed to extract requirements: %s", exc)
             return [f"Error extracting requirements: {exc}"]
 
-    def extract_strengths_and_weaknesses(
+    def run_strengths_weaknesses_tool(
         self, cv_text: str, job_requirements: Iterable[str]
-    ) -> Tuple[List[str], List[str]]:
+    ) -> StrengthsWeaknesses:
+        """
+        Tool 2: Given CV text and job requirements, return strengths and weaknesses.
+        """
+
         requirements_blob = "\n".join(f"- {req}" for req in job_requirements)
         prompt = self._prompts["strengths_weaknesses"].format(
-            requirements=requirements_blob or "- Not available", cv_text=cv_text
+            requirements=requirements_blob or "- Not available",
+            cv_text=cv_text,
         )
         try:
             response = self._call(prompt)
             strengths = _extract_section(response, "strengths")
             weaknesses = _extract_section(response, "weaknesses")
-            return strengths, weaknesses
         except Exception as exc:  # pragma: no cover - defensive guardrail
-            logger.exception("Failed to extract strengths/weaknesses: %s", exc)
-            return [f"Error extracting strengths: {exc}"], [f"Error extracting weaknesses: {exc}"]
+            logger.exception("Failed to run strengths_weaknesses tool: %s", exc)
+            strengths = [f"Error extracting strengths: {exc}"]
+            weaknesses = [f"Error extracting weaknesses: {exc}"]
+
+        return StrengthsWeaknesses(strengths=strengths, weaknesses=weaknesses)
+
+    def extract_strengths_and_weaknesses(
+        self, cv_text: str, job_requirements: Iterable[str]
+    ) -> Tuple[List[str], List[str]]:
+        """
+        Backwards-compatible wrapper, used elsewhere in the code.
+        """
+
+        result = self.run_strengths_weaknesses_tool(cv_text, job_requirements)
+        return result.strengths, result.weaknesses
 
     def question_plan(self, role_title: str, role_type: str) -> QuestionPlan:
         """Map the role to a technical/soft-skill ratio and prompt guidance."""
@@ -447,13 +518,19 @@ class LLMService:
     def compute_match_report(
         self, job_requirements: Iterable[str], strengths: Iterable[str], weaknesses: Iterable[str]
     ) -> MatchReport:
+        """
+        Tool 3: Given job requirements, strengths and weaknesses, compute a match report.
+
+        Uses the `match_report` prompt which returns JSON with:
+        - match_score (0-100)
+        - likelihood ("High" | "Medium" | "Low" | "Unknown")
+        - reasoning (short explanation)
+        """
         prompt = self._prompts["match_report"].format(
             job_requirements=list(job_requirements),
             strengths=list(strengths),
             weaknesses=list(weaknesses),
         )
-        import json
-
         try:
             raw = self._call(prompt)
             try:
@@ -545,30 +622,84 @@ class LLMService:
         except Exception as exc:  # pragma: no cover - defensive guardrail
             logger.exception("Failed to generate chat response: %s", exc)
             return "Sorry, I couldn't generate a reply right now."
-            
-    def evaluate_answer(self, question: str, answer: str) -> AnswerEvaluation | None:
-        """Evaluate a candidate's answer to a given question.
 
-        Returns an AnswerEvaluation or None if evaluation fails.
+    def run_answer_evaluator_tool(
+        self,
+        question: str,
+        answer: str,
+        job_requirements: Iterable[str],
+    ) -> AnswerEvaluation:
         """
+        Tool 4: Evaluate a single answer to a specific interview question.
+
+        Uses the `chat_evaluator` prompt which returns a JSON object:
+        {
+            "score": int,              # 0-100
+            "summary": str,            # one-paragraph summary
+            "improvements": [str, ...] # concrete improvement tips
+        }
+        """
+
+        requirements_blob = "\n".join(f"- {r}" for r in job_requirements)
         prompt = self._prompts["chat_evaluator"].format(
-            question=question or "Not provided",
-            answer=answer or "",
+            question=question,
+            answer=answer,
+            requirements=requirements_blob or "- Not available",
         )
+
         try:
             raw = self._call(prompt)
-        except Exception as exc:
+        except Exception as exc:  # pragma: no cover - defensive guardrail
             logger.exception("Answer evaluation LLM call failed: %s", exc)
-            return None
+            return AnswerEvaluation(
+                question=question or "",
+                answer=answer or "",
+                score=50,
+                summary="Evaluation failed",
+                improvements=[],
+            )
 
         try:
-            data = _maybe_json(raw)
-            score = int(data.get("score", 0))
-            summary = str(data.get("summary", "")).strip()
-            improvements = [str(x).strip() for x in data.get("improvements", []) if str(x).strip()]
-            return AnswerEvaluation(score=score, summary=summary, improvements=improvements)
-        except Exception as exc:
-            logger.exception("Failed to parse answer evaluation JSON: %s; raw=%r", exc, raw)
+            payload = json.loads(_extract_json(raw))
+        except Exception as exc:  # pragma: no cover - defensive guardrail
+            logger.exception("Failed to parse answer evaluation JSON: %s", exc)
+            return AnswerEvaluation(
+                question=question or "",
+                answer=answer or "",
+                score=50,
+                summary=raw[:200],
+                improvements=[],
+            )
+
+        score = int(payload.get("score", 0))
+        summary = str(payload.get("summary", "")).strip()
+        improvements = [
+            str(item).strip()
+            for item in payload.get("improvements", [])
+            if str(item).strip()
+        ]
+
+        return AnswerEvaluation(
+            question=question or "",
+            answer=answer or "",
+            score=score,
+            summary=summary,
+            improvements=improvements,
+        )
+
+    def evaluate_answer(
+        self, question: str, answer: str, job_requirements: Iterable[str] | None = None
+    ) -> AnswerEvaluation | None:
+        """Backwards-compatible wrapper that delegates to Tool 4."""
+
+        try:
+            return self.run_answer_evaluator_tool(
+                question=question or "Not provided",
+                answer=answer or "",
+                job_requirements=job_requirements or [],
+            )
+        except Exception as exc:  # pragma: no cover - defensive guardrail
+            logger.exception("Answer evaluation failed: %s", exc)
             return None
 
 
@@ -642,8 +773,6 @@ def _extract_json(text: str) -> str:
 
 
 def _maybe_json(text: str) -> Dict:
-    import json
-
     try:
         return json.loads(_extract_json(text))
     except Exception:
