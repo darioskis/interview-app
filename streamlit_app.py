@@ -116,6 +116,8 @@ if "last_question" not in st.session_state:
     st.session_state.last_question = ""
 if "last_evaluation" not in st.session_state:
     st.session_state.last_evaluation = None
+if "show_download_options" not in st.session_state:
+    st.session_state.show_download_options = False
 if "api_calls" not in st.session_state:
     st.session_state.api_calls = []
 
@@ -352,41 +354,46 @@ with col_chat:
     with header_left:
         st.subheader("Interview chat")
     with header_right:
-        export_records = _conversation_records()
-        pop = st.popover("Download this chat")
-        with pop:
-            if export_records:
-                st.markdown("#### Choose a format to download")
-                dl_col_json, dl_col_csv, dl_col_pdf = st.columns(3)
-                with dl_col_json:
-                    st.download_button(
-                        "JSON",
-                        _conversation_json(export_records),
-                        file_name="conversation.json",
-                        mime="application/json",
-                        use_container_width=True,
-                    )
-                with dl_col_csv:
-                    st.download_button(
-                        "CSV",
-                        _conversation_csv(export_records),
-                        file_name="conversation.csv",
-                        mime="text/csv",
-                        use_container_width=True,
-                    )
-                with dl_col_pdf:
-                    st.download_button(
-                        "PDF",
-                        _conversation_pdf(export_records),
-                        file_name="conversation.pdf",
-                        mime="application/pdf",
-                        use_container_width=True,
-                    )
-            else:
-                st.info("Conversation history will appear here once you start chatting.")
+        show_download = st.button("Download this chat")
+        if show_download:
+            st.session_state.show_download_options = not st.session_state.get(
+                "show_download_options", False
+            )
 
     if llm is None:
         st.stop()
+
+    export_records = _conversation_records()
+    if st.session_state.get("show_download_options"):
+        if export_records:
+            st.markdown("#### Choose a format to download")
+            dl_col_json, dl_col_csv, dl_col_pdf = st.columns(3)
+            with dl_col_json:
+                st.download_button(
+                    "JSON",
+                    _conversation_json(export_records),
+                    file_name="conversation.json",
+                    mime="application/json",
+                    use_container_width=True,
+                )
+            with dl_col_csv:
+                st.download_button(
+                    "CSV",
+                    _conversation_csv(export_records),
+                    file_name="conversation.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                )
+            with dl_col_pdf:
+                st.download_button(
+                    "PDF",
+                    _conversation_pdf(export_records),
+                    file_name="conversation.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                )
+        else:
+            st.info("Conversation history will appear here once you start chatting.")
 
     total_messages = len(st.session_state.messages)
     for idx, message in enumerate(st.session_state.messages):
