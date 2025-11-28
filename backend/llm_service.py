@@ -337,7 +337,8 @@ class LLMService:
         1) Filter by seniority (strict match to the four allowed levels).
         2) Rank the remaining questions by similarity between their soft_skill label
            and the extracted requirements (e.g., surfacing "Time Management" when
-           time management appears in requirements).
+           time management appears in requirements). If there is no relatively close match
+           between requirement and soft_skill label, then generate your own question for the requirement.
         Returns rich question metadata (ID, soft skill, text) so the chat layer can
         cite the originating KB item.
         """
