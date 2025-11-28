@@ -212,16 +212,19 @@ class LLMService:
             raise RuntimeError("LLM call failed") from exc
 
     def run_job_profile_tool(self, job_description: str) -> JobProfile:
-        """Tool 1: analyze a job description and return a structured job profile.
+        """
+        Tool 1: Analyze a job description and return structured job profile info.
 
-        If no job description is provided, return a generic default profile.
+        This version delegates the logic to `analyze_job_post`, which already:
+        - Uses the correct system + user prompts
+        - Uses JsonOutputParser
+        - Produces valid structured output
+        - Handles missing or malformed data safely
         """
 
         job_description = job_description or ""
         if not job_description.strip():
-            logger.info(
-                "run_job_profile_tool called with empty job_description, returning default profile."
-            )
+            logger.info("run_job_profile_tool: empty job_description, returning default.")
             return JobProfile(
                 role_title="Unknown role",
                 seniority="Regular Employee",
@@ -231,35 +234,15 @@ class LLMService:
 
         start = time.time()
         try:
-            prompt = self._prompts["job_analysis"].format(
-                job_description=job_description,
-                format_instructions="",
-            )
-            raw = self._call(prompt)
-
-            try:
-                payload = json.loads(_extract_json(raw))
-            except Exception:  # pragma: no cover - defensive guardrail
-                logger.exception("Failed to parse job profile JSON, falling back.")
-                return JobProfile(
-                    role_title="Unknown role",
-                    seniority="Regular Employee",
-                    role_type="Non-technical",
-                    requirements=[],
-                )
-
-            role_title = str(payload.get("role_title", "")).strip() or "Unknown role"
-            seniority = str(payload.get("seniority", "")).strip() or "Regular Employee"
-            role_type = str(payload.get("role_type", "")).strip() or "Non-technical"
-            requirements = [
-                str(r).strip() for r in payload.get("requirements", []) if str(r).strip()
-            ]
+            result = self.analyze_job_post(job_description)
 
             return JobProfile(
-                role_title=role_title,
-                seniority=seniority,
-                role_type=role_type,
-                requirements=requirements,
+                role_title=result.role_title.strip() or "Unknown role",
+                seniority=result.seniority.strip() or "Regular Employee",
+                role_type=result.role_type.strip() or "Non-technical",
+                requirements=[
+                    r.strip() for r in result.requirements if isinstance(r, str) and r.strip()
+                ],
             )
         finally:
             duration = time.time() - start
@@ -297,7 +280,7 @@ class LLMService:
 
         chain = prompt | self._langchain_llm | parser
         try:
-            result: JobAnalysisSchema = chain.invoke({"job_description": job_description})
+            result: JobAnalysisSchema = chain.invoke({"job_description": _escape_braces(job_description)})
             requirements = result.requirements or []
             normalized_seniority = _normalize_seniority(result.seniority)
             normalized_role_type = _normalize_role_type(result.role_type, result.role_title)
@@ -318,8 +301,8 @@ class LLMService:
         return _fallback_job_analysis(job_description, self)
 
     def extract_requirements(self, job_description: str) -> List[str]:
-        prompt = self._prompts["extract_requirements"].format(
-            job_description=job_description
+        prompt = _safe_format(
+            self._prompts["extract_requirements"], job_description=job_description
         )
         try:
             return _parse_bullets(self._call(prompt))
@@ -345,7 +328,8 @@ class LLMService:
         start = time.time()
         try:
             requirements_blob = "\n".join(f"- {req}" for req in job_requirements)
-            prompt = self._prompts["strengths_weaknesses"].format(
+            prompt = _safe_format(
+                self._prompts["strengths_weaknesses"],
                 requirements=requirements_blob or "- Not available",
                 cv_text=cv_text,
             )
@@ -577,7 +561,8 @@ class LLMService:
 
         start = time.time()
         try:
-            prompt = self._prompts["match_report"].format(
+            prompt = _safe_format(
+                self._prompts["match_report"],
                 job_requirements=job_requirements,
                 strengths=strengths,
                 weaknesses=weaknesses,
@@ -616,7 +601,8 @@ class LLMService:
         role_type: str | None = None,
     ) -> str:
         system_prompt_raw = self._prompts["chat_system"].strip()
-        system_prompt = system_prompt_raw.format(
+        system_prompt = _safe_format(
+            system_prompt_raw,
             job_description=job_description or "Not provided",
             cv_text=cv_text or "Not provided",
         )
@@ -667,9 +653,10 @@ class LLMService:
                 continue
             speaker = "Candidate" if msg["role"] == "user" else "Coach"
             conversation.append(f"{speaker}: {msg['content']}")
-        prompt = self._prompts["chat_prompt"].format(
-            profile_context=profile_context, 
-            conversation="\n".join(conversation)
+        prompt = _safe_format(
+            self._prompts["chat_prompt"],
+            profile_context=profile_context,
+            conversation="\n".join(conversation),
         )
         try:
             return self._call(prompt, system=system_prompt)
@@ -697,7 +684,8 @@ class LLMService:
         start = time.time()
         try:
             requirements_blob = "\n".join(f"- {r}" for r in job_requirements)
-            prompt = self._prompts["chat_evaluator"].format(
+            prompt = _safe_format(
+                self._prompts["chat_evaluator"],
                 question=question,
                 answer=answer,
                 requirements=requirements_blob or "- Not available",
@@ -778,6 +766,20 @@ def _response_to_text(response) -> str:
     except Exception as exc:  # pragma: no cover - defensive guardrail
         logger.exception("Failed to parse response text: %s", exc)
         return ""
+
+
+def _escape_braces(value: object) -> str:
+    """Escape braces so user-supplied text is safe for str.format."""
+
+    text = str(value)
+    return text.replace("{", "{{").replace("}", "}}")
+
+
+def _safe_format(template: str, **kwargs: object) -> str:
+    """Format a template while escaping braces in all user-provided values."""
+
+    escaped = {key: _escape_braces(val) for key, val in kwargs.items()}
+    return template.format(**escaped)
 
 
 def _parse_bullets(text: str) -> List[str]:
