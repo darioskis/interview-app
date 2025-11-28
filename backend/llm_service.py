@@ -212,7 +212,22 @@ class LLMService:
             raise RuntimeError("LLM call failed") from exc
 
     def run_job_profile_tool(self, job_description: str) -> JobProfile:
-        """Tool 1: analyze a job description and return a structured job profile."""
+        """Tool 1: analyze a job description and return a structured job profile.
+
+        If no job description is provided, return a generic default profile.
+        """
+
+        job_description = job_description or ""
+        if not job_description.strip():
+            logger.info(
+                "run_job_profile_tool called with empty job_description, returning default profile."
+            )
+            return JobProfile(
+                role_title="Unknown role",
+                seniority="Regular Employee",
+                role_type="Non-technical",
+                requirements=[],
+            )
 
         start = time.time()
         try:
@@ -314,7 +329,15 @@ class LLMService:
     ) -> StrengthsWeaknesses:
         """
         Tool 2: Given CV text and job requirements, return strengths and weaknesses.
+        If CV text is empty, return empty lists without calling the LLM.
         """
+
+        cv_text = cv_text or ""
+        if not cv_text.strip():
+            logger.info(
+                "run_strengths_weaknesses_tool called with empty cv_text, returning empty strengths/weaknesses."
+            )
+            return StrengthsWeaknesses(strengths=[], weaknesses=[])
 
         start = time.time()
         try:
@@ -537,12 +560,24 @@ class LLMService:
         - likelihood ("High" | "Medium" | "Low" | "Unknown")
         - reasoning (short explanation)
         """
+        job_requirements = list(job_requirements or [])
+        strengths = list(strengths or [])
+        weaknesses = list(weaknesses or [])
+
+        if not job_requirements and not strengths and not weaknesses:
+            logger.info("compute_match_report called with no data, returning generic report.")
+            return MatchReport(
+                match_score=0,
+                likelihood="Unknown",
+                reasoning="Not enough information was provided (no job description and no CV) to estimate the match.",
+            )
+
         start = time.time()
         try:
             prompt = self._prompts["match_report"].format(
-                job_requirements=list(job_requirements),
-                strengths=list(strengths),
-                weaknesses=list(weaknesses),
+                job_requirements=job_requirements,
+                strengths=strengths,
+                weaknesses=weaknesses,
             )
             try:
                 raw = self._call(prompt)

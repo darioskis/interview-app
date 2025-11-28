@@ -151,6 +151,11 @@ with col_overview:
                 st.error(cv_error)
             st.stop()
 
+        jd = st.session_state.job_description or ""
+        cv = st.session_state.cv_text or ""
+        has_jd = bool(jd.strip())
+        has_cv = bool(cv.strip())
+
         with st.spinner("Running LLM tools..."):
             st.session_state.question_plan = None
             st.session_state.soft_skill_questions = []
@@ -162,7 +167,10 @@ with col_overview:
                     "Please wait a bit before trying again."
                 )
                 st.stop()
-            job_profile = llm.run_job_profile_tool(st.session_state.job_description)
+            if has_jd:
+                job_profile = llm.run_job_profile_tool(jd)
+            else:
+                job_profile = llm.run_job_profile_tool("")
             st.session_state.job_role_title = job_profile.role_title
             st.session_state.job_seniority = job_profile.seniority
             st.session_state.job_role_type = job_profile.role_type
@@ -180,10 +188,16 @@ with col_overview:
                     "Please wait a bit before trying again."
                 )
                 st.stop()
-            sw = llm.run_strengths_weaknesses_tool(
-                st.session_state.cv_text,
-                st.session_state.job_requirements,
-            )
+            if has_cv:
+                sw = llm.run_strengths_weaknesses_tool(
+                    cv,
+                    st.session_state.job_requirements,
+                )
+            else:
+                sw = llm.run_strengths_weaknesses_tool(
+                    "",
+                    st.session_state.job_requirements,
+                )
             st.session_state.strengths = sw.strengths
             st.session_state.weaknesses = sw.weaknesses
 
@@ -208,6 +222,17 @@ with col_overview:
                 st.session_state.soft_skill_questions = llm.select_soft_skill_questions(
                     st.session_state.job_seniority, st.session_state.job_requirements
                 )
+
+        if not has_jd:
+            st.warning(
+                "You did not provide a job description. The role profile and match "
+                "report are generic and may be less accurate."
+            )
+        if not has_cv:
+            st.warning(
+                "You did not provide a CV. Strengths and weaknesses are empty, and "
+                "the match report is based only on the job side."
+            )
 
     st.markdown("---")
     st.markdown("### Job Profile (Tool 1: Job analysis)")
