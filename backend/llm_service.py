@@ -517,6 +517,14 @@ class LLMService:
     def compute_match_report(
         self, job_requirements: Iterable[str], strengths: Iterable[str], weaknesses: Iterable[str]
     ) -> MatchReport:
+        """
+        Tool 3: Given job requirements, strengths and weaknesses, compute a match report.
+
+        Uses the `match_report` prompt which returns JSON with:
+        - match_score (0-100)
+        - likelihood ("High" | "Medium" | "Low" | "Unknown")
+        - reasoning (short explanation)
+        """
         prompt = self._prompts["match_report"].format(
             job_requirements=list(job_requirements),
             strengths=list(strengths),
