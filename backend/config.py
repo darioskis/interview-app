@@ -28,4 +28,6 @@ PROMPT_FILES = {
     "chat_system": "chat_system.txt",
     "chat_prompt": "chat_prompt.txt",
     "chat_evaluator": "chat_evaluator.txt",
+    "job_analysis": "job_analysis.txt",
+    "soft_question_selector": "soft_question_selector.txt",
 }

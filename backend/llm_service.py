@@ -2,14 +2,21 @@
 producing structured interview insights."""
 from __future__ import annotations
 
+"""Utility functions for interacting with the OpenAI API and knowledge-base-driven interview flows."""
+
 import logging
 import os
-from pathlib import Path
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, Tuple
+from difflib import SequenceMatcher
+from pathlib import Path
+from typing import Dict, Iterable, List, Literal, Tuple
 
 from dotenv import load_dotenv
+from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_openai import ChatOpenAI
 from openai import OpenAI
+from pydantic import BaseModel, Field
 
 from backend.config import (
     OPENAI_MODEL,
@@ -57,6 +64,18 @@ DEFAULT_PROMPTS = {
         "You return score out of 10 and general feedback on good things and what to improve in an answer"
         "This evaluation should be given after completion answering each question i.e. including follow up questions"
     ),
+    "job_analysis": (
+        "Extract the role title, seniority level, role type, and a concise list of 5-10 key requirements."
+        "Seniority must be one of: Regular Employee, Team Lead, Manager, Director."
+        "Role type must be either Technical or Non-technical."
+        "Respond with JSON fields role_title, seniority, role_type, requirements."
+        "\nFollow these format rules:\n{format_instructions}"
+    ),
+    "soft_question_selector": (
+        "Given the seniority, key requirements, and candidate soft-skill questions, pick up to {max_questions} soft-skill"
+        " interview questions that best match the requirements. Return JSON with selected_questions."
+        "\nSeniority: {seniority}\nRequirements: {requirements}\nCandidates:\n{candidate_questions}\n{format_instructions}"
+    ),
 }
 
 
@@ -68,10 +87,29 @@ class MatchReport:
     likelihood: str
     reasoning: str
 
+
+@dataclass
 class AnswerEvaluation:
     score: int
     summary: str
     improvements: List[str]
+
+
+@dataclass
+class JobAnalysis:
+    role_title: str
+    seniority: str
+    role_type: str
+    requirements: List[str]
+
+
+@dataclass
+class QuestionPlan:
+    role_name: str
+    technical_percentage: int
+    soft_skill_percentage: int
+    prompt_instruction: str
+    category: str = ""
 
 class LLMService:
     """Simple wrapper around the OpenAI Responses API."""
@@ -87,6 +125,13 @@ class LLMService:
         self.top_p = OPENAI_TOP_P if top_p is None else float(top_p)
         self.client = OpenAI(api_key=api_key)
         self._prompts = _load_prompts()
+        self._langchain_llm = ChatOpenAI(
+            model=self.model,
+            temperature=self.temperature,
+            top_p=self.top_p,
+            openai_api_key=api_key,
+        )
+        self._soft_skill_kb, self._question_ratio_kb = _load_kb()
 
     def _call(self, prompt: str, system: str | None = None) -> str:
         """Send a simple prompt via the Responses API with an optional system message."""
@@ -116,6 +161,52 @@ class LLMService:
             logger.exception("LLM prompt failed: %s", exc)
             raise RuntimeError("LLM call failed") from exc
 
+    def analyze_job_post(self, job_description: str) -> JobAnalysis | None:
+        """Use LangChain to extract role metadata and requirements from a JD."""
+
+        class JobAnalysisSchema(BaseModel):
+            role_title: str = Field(description="Role or position title")
+            seniority: Literal[
+                "Regular Employee",
+                "Team Lead",
+                "Manager",
+                "Director",
+            ] = Field(
+                description="Seniority level using one of: Regular Employee, Team Lead, Manager, Director"
+            )
+            role_type: Literal["Technical", "Non-technical"] = Field(
+                description="Position type: Technical or Non-technical"
+            )
+            requirements: List[str] = Field(description="List of key requirements")
+
+        parser = JsonOutputParser(pydantic_object=JobAnalysisSchema)
+        prompt_template = self._prompts["job_analysis"]
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                (
+                    "system",
+                    prompt_template,
+                ),
+                ("user", "{job_description}"),
+            ]
+        ).partial(format_instructions=parser.get_format_instructions())
+
+        chain = prompt | self._langchain_llm | parser
+        try:
+            result: JobAnalysisSchema = chain.invoke({"job_description": job_description})
+            requirements = result.requirements or []
+            normalized_seniority = _normalize_seniority(result.seniority)
+            normalized_role_type = _normalize_role_type(result.role_type, result.role_title)
+            return JobAnalysis(
+                role_title=result.role_title.strip(),
+                seniority=normalized_seniority,
+                role_type=normalized_role_type,
+                requirements=[r.strip() for r in requirements if r.strip()],
+            )
+        except Exception as exc:  # pragma: no cover - defensive guardrail
+            logger.exception("Job analysis failed: %s", exc)
+            return None
+
     def extract_requirements(self, job_description: str) -> List[str]:
         prompt = self._prompts["extract_requirements"].format(
             job_description=job_description
@@ -141,6 +232,103 @@ class LLMService:
         except Exception as exc:  # pragma: no cover - defensive guardrail
             logger.exception("Failed to extract strengths/weaknesses: %s", exc)
             return [f"Error extracting strengths: {exc}"], [f"Error extracting weaknesses: {exc}"]
+
+    def question_plan(self, role_title: str, role_type: str) -> QuestionPlan:
+        """Map the role to a technical/soft-skill ratio and prompt guidance."""
+
+        normalized_role_type = _normalize_role_type(role_type, role_title)
+        is_technical = normalized_role_type.lower().startswith("tech")
+        default_plan = QuestionPlan(
+            role_name=role_title or "Unknown role",
+            technical_percentage=70 if is_technical else 40,
+            soft_skill_percentage=30 if is_technical else 60,
+            prompt_instruction=(
+                "Balance technical depth with soft skills to assess collaboration and communication."
+                if is_technical
+                else "Emphasize soft-skill and leadership depth; keep technical questions light or scenario-based."
+            ),
+            category=normalized_role_type or "General",
+        )
+
+        best_score = 0.0
+        chosen = None
+        query = f"{role_title} {role_type}".lower()
+        for entry in self._question_ratio_kb:
+            name = str(entry.get("role_name", "")).lower()
+            category = str(entry.get("category", "")).lower()
+            score = max(
+                SequenceMatcher(None, query, name).ratio(),
+                SequenceMatcher(None, query, category).ratio(),
+            )
+            if name and name in query:
+                score += 0.2
+            if score > best_score:
+                best_score = score
+                chosen = entry
+
+        if not chosen:
+            return default_plan
+
+        weights = chosen.get("weights", {})
+        return QuestionPlan(
+            role_name=chosen.get("role_name", default_plan.role_name),
+            technical_percentage=int(weights.get("technical_percentage", default_plan.technical_percentage)),
+            soft_skill_percentage=int(weights.get("soft_skill_percentage", default_plan.soft_skill_percentage)),
+            prompt_instruction=str(chosen.get("prompt_instruction", default_plan.prompt_instruction)),
+            category=str(chosen.get("category", normalized_role_type or default_plan.category)),
+        )
+
+    def select_soft_skill_questions(
+        self, seniority: str, requirements: Iterable[str], max_questions: int = 3
+    ) -> List[str]:
+        """Choose soft-skill questions from the KB using LangChain guidance."""
+
+        normalized_seniority = _normalize_seniority(seniority)
+        seniority_lower = (normalized_seniority or "").lower()
+        candidates = [
+            item
+            for item in self._soft_skill_kb
+            if item.get("seniority_level", "").lower() == seniority_lower or not seniority_lower
+        ]
+        if not candidates:
+            candidates = self._soft_skill_kb
+
+        candidate_text = "\n".join(
+            f"- {c.get('soft_skill')}: {c.get('question')}" for c in candidates
+        )
+
+        class Selection(BaseModel):
+            selected_questions: List[str] = Field(description="List of chosen soft-skill interview questions")
+
+        parser = JsonOutputParser(pydantic_object=Selection)
+        prompt_template = self._prompts["soft_question_selector"]
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                (
+                    "system",
+                    prompt_template,
+                ),
+            ]
+        ).partial(format_instructions=parser.get_format_instructions())
+
+        chain = prompt | self._langchain_llm | parser
+        try:
+            parsed: Selection = chain.invoke(
+                {
+                    "seniority": normalized_seniority or "Unknown",
+                    "requirements": ", ".join(requirements) or "Not provided",
+                    "candidate_questions": candidate_text,
+                    "max_questions": max_questions,
+                }
+            )
+            selected = [q.strip() for q in parsed.selected_questions if q.strip()]
+            if selected:
+                return selected
+        except Exception as exc:  # pragma: no cover - defensive guardrail
+            logger.exception("Soft-skill selection failed: %s", exc)
+
+        # Fallback to the top N candidates if parsing failed
+        return [c.get("question", "") for c in candidates[:max_questions] if c.get("question")]
 
     def compute_match_report(
         self, job_requirements: Iterable[str], strengths: Iterable[str], weaknesses: Iterable[str]
@@ -174,15 +362,39 @@ class LLMService:
         job_requirements: Iterable[str],
         strengths: Iterable[str],
         weaknesses: Iterable[str],
+        question_plan: QuestionPlan | None = None,
+        soft_skill_questions: Iterable[str] | None = None,
         job_description: str | None = None,
         cv_text: str | None = None,
+        role_title: str | None = None,
+        seniority: str | None = None,
+        role_type: str | None = None,
     ) -> str:
         system_prompt_raw = self._prompts["chat_system"].strip()
         system_prompt = system_prompt_raw.format(
             job_description=job_description or "Not provided",
             cv_text=cv_text or "Not provided",
         )
-        profile_context = _profile_blob(job_requirements, strengths, weaknesses)
+        if question_plan:
+            system_prompt += (
+                "\n\nInterview mix guidance: focus ~{tech}% technical and ~{soft}% soft-skill questions. "
+                "{instruction}"
+            ).format(
+                tech=question_plan.technical_percentage,
+                soft=question_plan.soft_skill_percentage,
+                instruction=question_plan.prompt_instruction,
+            )
+        if soft_skill_questions:
+            joined_soft = "\n".join(f"• {q}" for q in soft_skill_questions)
+            system_prompt += "\nPrioritize these soft-skill prompts when relevant:\n" + joined_soft
+        profile_context = _profile_blob(
+            job_requirements,
+            strengths,
+            weaknesses,
+            role_title=role_title,
+            seniority=seniority,
+            role_type=role_type,
+        )
         conversation: List[str] = []
         for msg in messages:
             if msg["role"] == "system":
@@ -294,20 +506,43 @@ def _extract_json(text: str) -> str:
         return "{}"
 
 
+def _maybe_json(text: str) -> Dict:
+    import json
+
+    try:
+        return json.loads(_extract_json(text))
+    except Exception:
+        return {}
+
+
 def _profile_blob(
     job_requirements: Iterable[str],
     strengths: Iterable[str],
     weaknesses: Iterable[str],
+    role_title: str | None = None,
+    seniority: str | None = None,
+    role_type: str | None = None,
 ) -> str:
     try:
-        return (
-            "Job requirements: "
-            + (", ".join(job_requirements) or "Not provided")
-            + "\nStrengths: "
-            + (", ".join(strengths) or "Not available")
-            + "\nWeaknesses: "
-            + (", ".join(weaknesses) or "Not available")
-        ).strip()
+        parts = []
+        if role_title or seniority or role_type:
+            parts.append(
+                "Role: "
+                + ", ".join(
+                    filter(
+                        None,
+                        [
+                            (role_title or "").strip(),
+                            (seniority or "").strip(),
+                            (role_type or "").strip(),
+                        ],
+                    )
+                ).strip()
+            )
+        parts.append("Job requirements: " + (", ".join(job_requirements) or "Not provided"))
+        parts.append("Strengths: " + (", ".join(strengths) or "Not available"))
+        parts.append("Weaknesses: " + (", ".join(weaknesses) or "Not available"))
+        return "\n".join(parts).strip()
     except Exception as exc:  # pragma: no cover - defensive guardrail
         logger.exception("Failed to build profile blob: %s", exc)
         return "Job requirements: Not provided\nStrengths: Not available\nWeaknesses: Not available"
@@ -330,3 +565,87 @@ def _read_prompt_file(path: Path, default: str) -> str:
     except Exception as exc:
         logger.exception("Failed to read prompt file %s: %s", path, exc)
         return default
+
+
+def _load_kb() -> Tuple[List[Dict], List[Dict]]:
+    import json
+
+    base = Path(__file__).resolve().parent / "KB"
+    soft_skill_path = base / "seniority_soft_skills_questions.json"
+    ratio_path = base / "question_type_ratios.json"
+
+    def _safe_read_json(path: Path) -> List[Dict]:
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            logger.warning("KB file %s missing; using empty list", path)
+            return []
+        except Exception as exc:  # pragma: no cover - defensive guardrail
+            logger.exception("Failed to load KB file %s: %s", path, exc)
+            return []
+
+    return _safe_read_json(soft_skill_path), _safe_read_json(ratio_path)
+
+
+def _normalize_seniority(raw: str | None) -> str:
+    """Map any free-form seniority string into one of four allowed values."""
+
+    text = (raw or "").strip().lower()
+    if not text:
+        return "Regular Employee"
+
+    if any(keyword in text for keyword in ["director", "head", "vp", "vice president"]):
+        return "Director"
+    if "manager" in text or "mgr" in text:
+        return "Manager"
+    if any(keyword in text for keyword in ["lead", "leader", "principal", "staff"]):
+        return "Team Lead"
+
+    return "Regular Employee"
+
+
+def _normalize_role_type(raw: str | None, role_title: str | None = None) -> str:
+    """Classify the position type as Technical or Non-technical."""
+
+    merged = f"{raw or ''} {role_title or ''}".lower()
+    if "non-technical" in merged:
+        return "Non-technical"
+
+    technical_keywords = [
+        "engineer",
+        "developer",
+        "devops",
+        "sre",
+        "architect",
+        "data",
+        "analytics",
+        "ml",
+        "ai",
+        "it ",
+        "software",
+        "systems",
+        "security",
+        "qa",
+        "test",
+    ]
+    if any(keyword in merged for keyword in technical_keywords):
+        return "Technical"
+
+    non_technical_keywords = [
+        "hr",
+        "recruit",
+        "talent",
+        "sales",
+        "marketing",
+        "customer",
+        "support",
+        "success",
+        "operations",
+        "finance",
+        "legal",
+        "people",
+    ]
+    if any(keyword in merged for keyword in non_technical_keywords):
+        return "Non-technical"
+
+    return "Technical"

@@ -49,14 +49,24 @@ if "job_description" not in st.session_state:
     st.session_state.job_description = ""
 if "cv_text" not in st.session_state:
     st.session_state.cv_text = ""
+if "role_title" not in st.session_state:
+    st.session_state.role_title = ""
+if "seniority_level" not in st.session_state:
+    st.session_state.seniority_level = ""
+if "role_type" not in st.session_state:
+    st.session_state.role_type = ""
 if "job_requirements" not in st.session_state:
     st.session_state.job_requirements = []
 if "strengths" not in st.session_state:
     st.session_state.strengths = []
 if "weaknesses" not in st.session_state:
     st.session_state.weaknesses = []
+if "soft_skill_questions" not in st.session_state:
+    st.session_state.soft_skill_questions = []
 if "match_report" not in st.session_state:
     st.session_state.match_report = MatchReport(match_score=0, likelihood="N/A", reasoning="")
+if "question_plan" not in st.session_state:
+    st.session_state.question_plan = None
 
 llm = None
 try:
@@ -86,22 +96,74 @@ with col_overview:
 
     if submitted and llm:
         with st.spinner("Extracting requirements and strengths..."):
+            st.session_state.question_plan = None
+            st.session_state.soft_skill_questions = []
+            st.session_state.role_title = ""
+            st.session_state.seniority_level = ""
+            st.session_state.role_type = ""
+            analysis = None
             if st.session_state.job_description:
-                st.session_state.job_requirements = llm.extract_requirements(
-                    st.session_state.job_description
+                analysis = llm.analyze_job_post(st.session_state.job_description)
+                if analysis:
+                    st.session_state.role_title = analysis.role_title
+                    st.session_state.seniority_level = analysis.seniority
+                    st.session_state.role_type = analysis.role_type
+                    st.session_state.job_requirements = analysis.requirements
+                else:
+                    st.session_state.job_requirements = llm.extract_requirements(
+                        st.session_state.job_description
+                    )
+            else:
+                st.session_state.job_requirements = []
+
+            if st.session_state.job_requirements:
+                st.session_state.question_plan = llm.question_plan(
+                    st.session_state.role_title, st.session_state.role_type
                 )
+                st.session_state.soft_skill_questions = llm.select_soft_skill_questions(
+                    st.session_state.seniority_level, st.session_state.job_requirements
+                )
+
             if st.session_state.cv_text:
                 strengths, weaknesses = llm.extract_strengths_and_weaknesses(
                     st.session_state.cv_text, st.session_state.job_requirements
                 )
                 st.session_state.strengths = strengths
                 st.session_state.weaknesses = weaknesses
+
             if st.session_state.job_requirements and st.session_state.strengths:
                 st.session_state.match_report = llm.compute_match_report(
                     st.session_state.job_requirements,
                     st.session_state.strengths,
                     st.session_state.weaknesses,
                 )
+
+    st.markdown("---")
+    st.markdown("**Detected role**")
+    if st.session_state.role_title or st.session_state.seniority_level or st.session_state.role_type:
+        st.write(
+            f"{st.session_state.role_title or 'Role TBD'}"
+            f" | {st.session_state.seniority_level or 'Seniority TBD'}"
+            f" | {st.session_state.role_type or 'Role type TBD'}"
+        )
+    else:
+        st.info("Provide a job description to detect the role and seniority.")
+
+    st.markdown("**Question mix guidance**")
+    if st.session_state.question_plan:
+        qp = st.session_state.question_plan
+        st.write(
+            f"Technical: {qp.technical_percentage}% | Soft skills: {qp.soft_skill_percentage}%"
+        )
+        st.caption(qp.prompt_instruction)
+    else:
+        st.info("Question ratio appears once a role is detected.")
+
+    st.markdown("**Soft-skill focus**")
+    if st.session_state.soft_skill_questions:
+        st.write("\n".join(f"• {q}" for q in st.session_state.soft_skill_questions))
+    else:
+        st.info("Soft-skill prompts will show after role detection.")
 
     st.markdown("---")
     st.markdown("**Key job requirements**")
@@ -171,8 +233,13 @@ with col_chat:
                     st.session_state.job_requirements,
                     st.session_state.strengths,
                     st.session_state.weaknesses,
-                    st.session_state.job_description,
-                    st.session_state.cv_text,
+                    question_plan=st.session_state.question_plan,
+                    soft_skill_questions=st.session_state.soft_skill_questions,
+                    job_description=st.session_state.job_description,
+                    cv_text=st.session_state.cv_text,
+                    role_title=st.session_state.role_title,
+                    seniority=st.session_state.seniority_level,
+                    role_type=st.session_state.role_type,
                 )
 
             # Save assistant message (used as "last question" next time)
