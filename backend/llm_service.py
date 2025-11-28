@@ -197,15 +197,21 @@ class LLMService:
             requirements = result.requirements or []
             normalized_seniority = _normalize_seniority(result.seniority)
             normalized_role_type = _normalize_role_type(result.role_type, result.role_title)
-            return JobAnalysis(
-                role_title=result.role_title.strip(),
-                seniority=normalized_seniority,
-                role_type=normalized_role_type,
-                requirements=[r.strip() for r in requirements if r.strip()],
-            )
+            role_title_clean = result.role_title.strip()
+
+            if role_title_clean:
+                return JobAnalysis(
+                    role_title=role_title_clean,
+                    seniority=normalized_seniority,
+                    role_type=normalized_role_type,
+                    requirements=[r.strip() for r in requirements if r.strip()],
+                )
+
+            logger.warning("Job analysis returned an empty role title; falling back to heuristics")
         except Exception as exc:  # pragma: no cover - defensive guardrail
             logger.exception("Job analysis failed: %s", exc)
-            return None
+
+        return _fallback_job_analysis(job_description, self)
 
     def extract_requirements(self, job_description: str) -> List[str]:
         prompt = self._prompts["extract_requirements"].format(
@@ -281,7 +287,14 @@ class LLMService:
     def select_soft_skill_questions(
         self, seniority: str, requirements: Iterable[str], max_questions: int = 3
     ) -> List[str]:
-        """Choose soft-skill questions from the KB using LangChain guidance."""
+        """Choose soft-skill questions from the KB using LangChain guidance.
+
+        The flow follows two filters in order:
+        1) Filter by seniority (strict match to the four allowed levels).
+        2) Rank the remaining questions by similarity between their soft_skill label
+           and the extracted requirements (e.g., surfacing "Time Management" when
+           time management appears in requirements).
+        """
 
         normalized_seniority = _normalize_seniority(seniority)
         seniority_lower = (normalized_seniority or "").lower()
@@ -293,8 +306,19 @@ class LLMService:
         if not candidates:
             candidates = self._soft_skill_kb
 
+        requirement_list = [r.strip() for r in requirements if str(r).strip()]
+        scored_candidates = [
+            (
+                _soft_skill_requirement_score(str(item.get("soft_skill", "")), requirement_list),
+                item,
+            )
+            for item in candidates
+        ]
+        scored_candidates.sort(key=lambda pair: pair[0], reverse=True)
+        ranked_candidates = [item for _, item in scored_candidates]
+
         candidate_text = "\n".join(
-            f"- {c.get('soft_skill')}: {c.get('question')}" for c in candidates
+            f"- {c.get('soft_skill')}: {c.get('question')}" for c in ranked_candidates
         )
 
         class Selection(BaseModel):
@@ -327,8 +351,10 @@ class LLMService:
         except Exception as exc:  # pragma: no cover - defensive guardrail
             logger.exception("Soft-skill selection failed: %s", exc)
 
-        # Fallback to the top N candidates if parsing failed
-        return [c.get("question", "") for c in candidates[:max_questions] if c.get("question")]
+        # Fallback to the top N ranked candidates if parsing failed
+        return [
+            c.get("question", "") for c in ranked_candidates[:max_questions] if c.get("question")
+        ]
 
     def compute_match_report(
         self, job_requirements: Iterable[str], strengths: Iterable[str], weaknesses: Iterable[str]
@@ -515,6 +541,32 @@ def _maybe_json(text: str) -> Dict:
         return {}
 
 
+def _soft_skill_requirement_score(soft_skill: str, requirements: Iterable[str]) -> float:
+    """Score how well a soft skill aligns to the requirement list (case-insensitive).
+
+    Seniority is handled before this scoring function; here we focus purely on
+    similarity between the soft-skill label and the extracted requirements so that
+    items like "Time Management" surface when that requirement appears or is implied.
+    """
+
+    label = (soft_skill or "").strip().lower()
+    if not label:
+        return 0.0
+
+    requirement_list = [str(r).strip().lower() for r in requirements if str(r).strip()]
+    if not requirement_list:
+        return 0.0
+
+    best = 0.0
+    for req in requirement_list:
+        if not req:
+            continue
+        if label in req or req in label:
+            return 1.0
+        best = max(best, SequenceMatcher(None, label, req).ratio())
+    return best
+
+
 def _profile_blob(
     job_requirements: Iterable[str],
     strengths: Iterable[str],
@@ -649,3 +701,43 @@ def _normalize_role_type(raw: str | None, role_title: str | None = None) -> str:
         return "Non-technical"
 
     return "Technical"
+
+
+def _fallback_job_analysis(job_description: str, service: "LLMService") -> JobAnalysis:
+    """Heuristic extraction when structured parsing fails or omits role details."""
+
+    role_title = _guess_role_title(job_description)
+    seniority = _normalize_seniority(role_title or job_description)
+    role_type = _normalize_role_type(None, f"{role_title} {job_description}")
+
+    requirements: List[str] = []
+    try:
+        requirements = service.extract_requirements(job_description)
+    except Exception as exc:  # pragma: no cover - defensive guardrail
+        logger.exception("Fallback requirement extraction failed: %s", exc)
+
+    return JobAnalysis(
+        role_title=role_title or "Role not detected",
+        seniority=seniority,
+        role_type=role_type,
+        requirements=requirements,
+    )
+
+
+def _guess_role_title(job_description: str) -> str:
+    """Pull the most plausible role title from the first descriptive lines."""
+
+    try:
+        lines = [line.strip(" -*\t") for line in job_description.splitlines() if line.strip()]
+        for line in lines:
+            lower = line.lower()
+            if any(lower.startswith(prefix) for prefix in ["job title", "role", "position"]):
+                candidate = line.split(":", 1)[-1].strip()
+                if candidate:
+                    return candidate
+            if 1 <= len(line.split()) <= 12:
+                return line
+    except Exception as exc:  # pragma: no cover - defensive guardrail
+        logger.exception("Role title guess failed: %s", exc)
+
+    return ""

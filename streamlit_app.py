@@ -7,12 +7,19 @@ load_dotenv()
 
 st.set_page_config(page_title="Interview Coach", layout="wide")
 
-# Keep the chat input visible, similar to ChatGPT's floating composer
+# Keep the chat input visible and pinned to the bottom of the viewport, similar to ChatGPT's floating composer
 st.markdown(
     """
     <style>
+    /* Prevent content from being hidden behind the fixed composer */
+    main .block-container {
+        padding-bottom: 150px;
+    }
+
     div[data-testid="stChatInput"] {
-        position: sticky;
+        position: fixed;
+        left: 0;
+        right: 0;
         bottom: 0;
         z-index: 1000;
         background: linear-gradient(
@@ -161,26 +168,26 @@ with col_overview:
 
     st.markdown("**Soft-skill focus**")
     if st.session_state.soft_skill_questions:
-        st.write("\n".join(f"• {q}" for q in st.session_state.soft_skill_questions))
+        st.write("\n".join(f"• {q}\n" for q in st.session_state.soft_skill_questions))
     else:
         st.info("Soft-skill prompts will show after role detection.")
 
     st.markdown("---")
     st.markdown("**Key job requirements**")
     if st.session_state.job_requirements:
-        st.write("\n".join(f"• {req}" for req in st.session_state.job_requirements))
+        st.write("\n".join(f"• {req}\n" for req in st.session_state.job_requirements))
     else:
         st.info("Provide the job description to extract requirements.")
 
     st.markdown("**Your strengths**")
     if st.session_state.strengths:
-        st.write("\n".join(f"• {item}" for item in st.session_state.strengths))
+        st.write("\n".join(f"• {item}\n" for item in st.session_state.strengths))
     else:
         st.info("Paste your CV/resume to identify strengths.")
 
     st.markdown("**Potential weaknesses**")
     if st.session_state.weaknesses:
-        st.write("\n".join(f"• {item}" for item in st.session_state.weaknesses))
+        st.write("\n".join(f"• {item}\n" for item in st.session_state.weaknesses))
     else:
         st.info("Weaknesses appear here once your CV is analyzed.")
 
