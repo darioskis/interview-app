@@ -149,18 +149,34 @@ def _conversation_csv(records: list[dict]) -> bytes:
 
 
 def _conversation_pdf(records: list[dict]) -> bytes:
+    def _wrap_long_words(text: str, max_len: int = 80) -> str:
+        wrapped_lines: list[str] = []
+        for line in str(text or "").splitlines() or [""]:
+            pieces = []
+            for word in line.split(" "):
+                if len(word) <= max_len:
+                    pieces.append(word)
+                    continue
+                # Break overly long tokens so FPDF can render them
+                pieces.extend([word[i : i + max_len] for i in range(0, len(word), max_len)])
+            wrapped_lines.append(" ".join(pieces))
+        return "\n".join(wrapped_lines)
+
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
     pdf.set_font("Arial", size=12)
     pdf.cell(0, 10, "Conversation History", ln=True)
     pdf.ln(5)
+    max_width = pdf.w - 2 * pdf.l_margin
     for row in records:
         header = f"#{row.get('id', '')} - {row.get('role', '').title()}"
         pdf.set_font("Arial", style="B", size=11)
-        pdf.multi_cell(0, 8, header)
+        pdf.set_x(pdf.l_margin)
+        pdf.multi_cell(max_width, 8, _wrap_long_words(header))
         pdf.set_font("Arial", size=11)
-        pdf.multi_cell(0, 8, str(row.get("message", "")))
+        pdf.set_x(pdf.l_margin)
+        pdf.multi_cell(max_width, 8, _wrap_long_words(row.get("message", "")))
         pdf.ln(2)
     return pdf.output(dest="S").encode("latin1")
 
