@@ -621,36 +621,84 @@ class LLMService:
         except Exception as exc:  # pragma: no cover - defensive guardrail
             logger.exception("Failed to generate chat response: %s", exc)
             return "Sorry, I couldn't generate a reply right now."
-            
-    def evaluate_answer(self, question: str, answer: str) -> AnswerEvaluation | None:
-        """Evaluate a candidate's answer to a given question.
 
-        Returns an AnswerEvaluation or None if evaluation fails.
+    def run_answer_evaluator_tool(
+        self,
+        question: str,
+        answer: str,
+        job_requirements: Iterable[str],
+    ) -> AnswerEvaluation:
         """
+        Tool 4: Evaluate a single answer to a specific interview question.
+
+        Uses the `chat_evaluator` prompt which returns a JSON object:
+        {
+            "score": int,              # 0-100
+            "summary": str,            # one-paragraph summary
+            "improvements": [str, ...] # concrete improvement tips
+        }
+        """
+
+        requirements_blob = "\n".join(f"- {r}" for r in job_requirements)
         prompt = self._prompts["chat_evaluator"].format(
-            question=question or "Not provided",
-            answer=answer or "",
+            question=question,
+            answer=answer,
+            requirements=requirements_blob or "- Not available",
         )
+
         try:
             raw = self._call(prompt)
-        except Exception as exc:
+        except Exception as exc:  # pragma: no cover - defensive guardrail
             logger.exception("Answer evaluation LLM call failed: %s", exc)
-            return None
-
-        try:
-            data = _maybe_json(raw)
-            score = int(data.get("score", 0))
-            summary = str(data.get("summary", "")).strip()
-            improvements = [str(x).strip() for x in data.get("improvements", []) if str(x).strip()]
             return AnswerEvaluation(
                 question=question or "",
                 answer=answer or "",
-                score=score,
-                summary=summary,
-                improvements=improvements,
+                score=50,
+                summary="Evaluation failed",
+                improvements=[],
             )
-        except Exception as exc:
-            logger.exception("Failed to parse answer evaluation JSON: %s; raw=%r", exc, raw)
+
+        try:
+            payload = json.loads(_extract_json(raw))
+        except Exception as exc:  # pragma: no cover - defensive guardrail
+            logger.exception("Failed to parse answer evaluation JSON: %s", exc)
+            return AnswerEvaluation(
+                question=question or "",
+                answer=answer or "",
+                score=50,
+                summary=raw[:200],
+                improvements=[],
+            )
+
+        score = int(payload.get("score", 0))
+        summary = str(payload.get("summary", "")).strip()
+        improvements = [
+            str(item).strip()
+            for item in payload.get("improvements", [])
+            if str(item).strip()
+        ]
+
+        return AnswerEvaluation(
+            question=question or "",
+            answer=answer or "",
+            score=score,
+            summary=summary,
+            improvements=improvements,
+        )
+
+    def evaluate_answer(
+        self, question: str, answer: str, job_requirements: Iterable[str] | None = None
+    ) -> AnswerEvaluation | None:
+        """Backwards-compatible wrapper that delegates to Tool 4."""
+
+        try:
+            return self.run_answer_evaluator_tool(
+                question=question or "Not provided",
+                answer=answer or "",
+                job_requirements=job_requirements or [],
+            )
+        except Exception as exc:  # pragma: no cover - defensive guardrail
+            logger.exception("Answer evaluation failed: %s", exc)
             return None
 
 
