@@ -231,7 +231,10 @@ class LLMService:
 
         start = time.time()
         try:
-            prompt = self._prompts["job_analysis"].format(job_description=job_description)
+            prompt = self._prompts["job_analysis"].format(
+                job_description=job_description,
+                format_instructions="",
+            )
             raw = self._call(prompt)
 
             try:
