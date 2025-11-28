@@ -9,12 +9,13 @@ import os
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from pathlib import Path
-from typing import Dict, Iterable, List, Literal, Tuple
+from typing import Dict, Iterable, List, Literal, Optional, Tuple
 
 from dotenv import load_dotenv
+from langchain_community.vectorstores import Chroma
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from openai import OpenAI
 from pydantic import BaseModel, Field
 
@@ -24,6 +25,16 @@ from backend.config import (
     OPENAI_TOP_P,
     PROMPTS_DIR,
     PROMPT_FILES,
+)
+from backend.kb_vectorstores import (
+    RoleQuestionRatio as KBRatio,
+    SoftSkillQuestion as KBSoftSkillQuestion,
+    build_role_ratio_vectorstore,
+    build_soft_skill_question_vectorstore,
+    load_question_type_ratios,
+    load_role_ratio_vectorstore,
+    load_seniority_soft_skill_questions,
+    load_soft_skill_question_vectorstore,
 )
 
 load_dotenv()
@@ -140,7 +151,13 @@ class LLMService:
             top_p=self.top_p,
             openai_api_key=api_key,
         )
-        self._soft_skill_kb, self._question_ratio_kb = _load_kb()
+        self._embeddings = OpenAIEmbeddings(openai_api_key=api_key)
+        (
+            self._soft_skill_kb,
+            self._question_ratio_kb,
+            self._soft_skill_store,
+            self._role_ratio_store,
+        ) = _load_kb_resources(self._embeddings)
 
     def _call(self, prompt: str, system: str | None = None) -> str:
         """Send a simple prompt via the Responses API with an optional system message."""
@@ -265,12 +282,29 @@ class LLMService:
             category=normalized_role_type or "General",
         )
 
+        vector_match = _search_role_ratio_vectorstore(
+            self._role_ratio_store, f"{role_title} {role_type}", normalized_role_type
+        )
+        if vector_match:
+            meta = vector_match.metadata or {}
+            return QuestionPlan(
+                role_name=str(meta.get("role_name", role_title or default_plan.role_name)),
+                technical_percentage=int(
+                    meta.get("technical_percentage", default_plan.technical_percentage)
+                ),
+                soft_skill_percentage=int(
+                    meta.get("soft_skill_percentage", default_plan.soft_skill_percentage)
+                ),
+                prompt_instruction=str(meta.get("prompt_instruction", default_plan.prompt_instruction)),
+                category=str(meta.get("category", normalized_role_type or default_plan.category)),
+            )
+
         best_score = 0.0
-        chosen = None
+        chosen: KBRatio | None = None
         query = f"{role_title} {role_type}".lower()
         for entry in self._question_ratio_kb:
-            name = str(entry.get("role_name", "")).lower()
-            category = str(entry.get("category", "")).lower()
+            name = entry.role_name.lower()
+            category = entry.category.lower()
             score = max(
                 SequenceMatcher(None, query, name).ratio(),
                 SequenceMatcher(None, query, category).ratio(),
@@ -284,13 +318,14 @@ class LLMService:
         if not chosen:
             return default_plan
 
-        weights = chosen.get("weights", {})
         return QuestionPlan(
-            role_name=chosen.get("role_name", default_plan.role_name),
-            technical_percentage=int(weights.get("technical_percentage", default_plan.technical_percentage)),
-            soft_skill_percentage=int(weights.get("soft_skill_percentage", default_plan.soft_skill_percentage)),
-            prompt_instruction=str(chosen.get("prompt_instruction", default_plan.prompt_instruction)),
-            category=str(chosen.get("category", normalized_role_type or default_plan.category)),
+            role_name=chosen.role_name or default_plan.role_name,
+            technical_percentage=int(chosen.technical_percentage or default_plan.technical_percentage),
+            soft_skill_percentage=int(
+                chosen.soft_skill_percentage or default_plan.soft_skill_percentage
+            ),
+            prompt_instruction=str(chosen.prompt_instruction or default_plan.prompt_instruction),
+            category=str(chosen.category or normalized_role_type or default_plan.category),
         )
 
     def select_soft_skill_questions(
@@ -309,28 +344,47 @@ class LLMService:
         """
 
         normalized_seniority = _normalize_seniority(seniority)
-        seniority_lower = (normalized_seniority or "").lower()
-        candidates = [
-            item
-            for item in self._soft_skill_kb
-            if item.get("seniority_level", "").lower() == seniority_lower or not seniority_lower
-        ]
-        if not candidates:
-            candidates = self._soft_skill_kb
-
         requirement_list = [r.strip() for r in requirements if str(r).strip()]
-        scored_candidates = [
-            (
-                _soft_skill_requirement_score(str(item.get("soft_skill", "")), requirement_list),
-                item,
-            )
-            for item in candidates
-        ]
-        scored_candidates.sort(key=lambda pair: pair[0], reverse=True)
-        ranked_candidates = [item for _, item in scored_candidates]
+
+        ranked_candidates: List[SoftSkillQuestion] = []
+        vector_candidates = _retrieve_soft_skill_questions(
+            self._soft_skill_store,
+            query_text=", ".join(requirement_list) or "Soft skills",
+            seniority=normalized_seniority,
+            k=max(6, max_questions * 2),
+        )
+        if vector_candidates:
+            ranked_candidates = vector_candidates
+        else:
+            scored_candidates = [
+                (
+                    _soft_skill_requirement_score(item.soft_skill, requirement_list),
+                    item,
+                )
+                for item in self._soft_skill_kb
+                if not normalized_seniority
+                or item.seniority_level.lower() == normalized_seniority.lower()
+            ]
+            if not scored_candidates:
+                scored_candidates = [
+                    (
+                        _soft_skill_requirement_score(item.soft_skill, requirement_list),
+                        item,
+                    )
+                    for item in self._soft_skill_kb
+                ]
+            scored_candidates.sort(key=lambda pair: pair[0], reverse=True)
+            ranked_candidates = [
+                SoftSkillQuestion(
+                    id=str(item.id),
+                    soft_skill=item.soft_skill,
+                    question=item.question,
+                )
+                for _, item in scored_candidates
+            ]
 
         candidate_text = "\n".join(
-            f"- ID-{c.get('id', '')} | {c.get('soft_skill')}: {c.get('question')}" for c in ranked_candidates
+            f"- ID-{c.id} | {c.soft_skill}: {c.question}" for c in ranked_candidates
         )
 
         class Selection(BaseModel):
@@ -361,20 +415,15 @@ class LLMService:
             if selected:
                 mapped: List[SoftSkillQuestion] = []
                 for text in selected:
-                    match = next(
-                        (
-                            SoftSkillQuestion(
-                                id=str(c.get("id", "")).strip(),
-                                soft_skill=str(c.get("soft_skill", "")).strip(),
-                                question=str(c.get("question", "")).strip(),
-                            )
-                            for c in ranked_candidates
-                            if str(c.get("question", "")).strip() == text
-                        ),
-                        None,
-                    )
+                    match = next((c for c in ranked_candidates if c.question.strip() == text), None)
                     if match:
-                        mapped.append(match)
+                        mapped.append(
+                            SoftSkillQuestion(
+                                id=str(match.id),
+                                soft_skill=str(match.soft_skill),
+                                question=str(match.question),
+                            )
+                        )
                 if mapped:
                     return mapped[:max_questions]
         except Exception as exc:  # pragma: no cover - defensive guardrail
@@ -383,13 +432,13 @@ class LLMService:
         # Fallback to the top N ranked candidates if parsing failed
         fallback: List[SoftSkillQuestion] = []
         for c in ranked_candidates[:max_questions]:
-            question_text = str(c.get("question", "")).strip()
+            question_text = str(getattr(c, "question", "")).strip()
             if not question_text:
                 continue
             fallback.append(
                 SoftSkillQuestion(
-                    id=str(c.get("id", "")).strip(),
-                    soft_skill=str(c.get("soft_skill", "")).strip(),
+                    id=str(getattr(c, "id", "")).strip(),
+                    soft_skill=str(getattr(c, "soft_skill", "")).strip(),
                     question=question_text,
                 )
             )
@@ -679,24 +728,115 @@ def _read_prompt_file(path: Path, default: str) -> str:
         return default
 
 
-def _load_kb() -> Tuple[List[Dict], List[Dict]]:
-    import json
+def _search_role_ratio_vectorstore(
+    store: Optional[Chroma], query: str, normalized_role_type: str
+) -> Optional[object]:
+    """Retrieve the closest role ratio entry from the vector store if available."""
 
-    base = Path(__file__).resolve().parent / "KB"
-    soft_skill_path = base / "seniority_soft_skills_questions.json"
-    ratio_path = base / "question_type_ratios.json"
+    if not store:
+        return None
 
-    def _safe_read_json(path: Path) -> List[Dict]:
-        try:
-            return json.loads(path.read_text(encoding="utf-8"))
-        except FileNotFoundError:
-            logger.warning("KB file %s missing; using empty list", path)
-            return []
-        except Exception as exc:  # pragma: no cover - defensive guardrail
-            logger.exception("Failed to load KB file %s: %s", path, exc)
-            return []
+    filters: Dict[str, str] = {}
+    lower_type = normalized_role_type.lower()
+    if lower_type.startswith("tech"):
+        filters["category"] = "Technical"
+    elif lower_type.startswith("non"):
+        filters["category"] = "Non-Technical"
 
-    return _safe_read_json(soft_skill_path), _safe_read_json(ratio_path)
+    try:
+        results = store.similarity_search_with_relevance_scores(
+            query, k=3, filter=filters or None
+        )
+        if results:
+            return results[0][0]
+    except Exception as exc:  # pragma: no cover - defensive guardrail
+        logger.exception("Role ratio vector search failed: %s", exc)
+
+    return None
+
+
+def _retrieve_soft_skill_questions(
+    store: Optional[Chroma], query_text: str, seniority: str, k: int = 6
+) -> List[SoftSkillQuestion]:
+    """Retrieve soft-skill questions from the vector store filtered by seniority."""
+
+    if not store:
+        return []
+
+    filters: Dict[str, str] = {}
+    if seniority:
+        filters["seniority_level"] = seniority
+
+    try:
+        results = store.similarity_search_with_relevance_scores(
+            query_text, k=k, filter=filters or None
+        )
+        questions: List[SoftSkillQuestion] = []
+        seen: set[Tuple[str, str]] = set()
+        for doc, _ in results:
+            qid = str(doc.metadata.get("id", ""))
+            key = (qid, doc.page_content)
+            if key in seen:
+                continue
+            seen.add(key)
+            questions.append(
+                SoftSkillQuestion(
+                    id=qid,
+                    soft_skill=str(doc.metadata.get("soft_skill", "")).strip(),
+                    question=str(doc.page_content).strip(),
+                )
+            )
+        return questions
+    except Exception as exc:  # pragma: no cover - defensive guardrail
+        logger.exception("Soft-skill vector search failed: %s", exc)
+        return []
+
+
+def _load_kb_resources(embeddings: OpenAIEmbeddings):
+    """Load KB JSON files and prepare vector stores for retrieval."""
+
+    base_dir = Path(__file__).resolve().parent
+    kb_dir = base_dir / "KB"
+    soft_skill_path = kb_dir / "seniority_soft_skills_questions.json"
+    ratio_path = kb_dir / "question_type_ratios.json"
+
+    soft_questions: List[KBSoftSkillQuestion] = []
+    role_ratios: List[KBRatio] = []
+    soft_store = None
+    role_store = None
+
+    try:
+        soft_questions = load_seniority_soft_skill_questions(soft_skill_path)
+    except Exception as exc:  # pragma: no cover - defensive guardrail
+        logger.exception("Failed to load soft-skill KB: %s", exc)
+
+    try:
+        role_ratios = load_question_type_ratios(ratio_path)
+    except Exception as exc:  # pragma: no cover - defensive guardrail
+        logger.exception("Failed to load role ratio KB: %s", exc)
+
+    soft_store_dir = base_dir / ".chroma_soft_skill_questions"
+    role_store_dir = base_dir / ".chroma_role_ratios"
+
+    try:
+        if soft_store_dir.exists():
+            soft_store = load_soft_skill_question_vectorstore(embeddings, soft_store_dir)
+        elif soft_questions:
+            soft_store = build_soft_skill_question_vectorstore(
+                soft_questions, embeddings, soft_store_dir
+            )
+    except Exception as exc:  # pragma: no cover - defensive guardrail
+        logger.exception("Failed to initialize soft-skill vector store: %s", exc)
+
+    try:
+        if role_store_dir.exists():
+            role_store = load_role_ratio_vectorstore(embeddings, role_store_dir)
+        elif role_ratios:
+            role_store = build_role_ratio_vectorstore(role_ratios, embeddings, role_store_dir)
+    except Exception as exc:  # pragma: no cover - defensive guardrail
+        logger.exception("Failed to initialize role ratio vector store: %s", exc)
+
+    return soft_questions, role_ratios, soft_store, role_store
 
 
 def _normalize_seniority(raw: str | None) -> str:
@@ -764,11 +904,16 @@ def _normalize_role_type(raw: str | None, role_title: str | None = None) -> str:
 
 
 def _fallback_job_analysis(job_description: str, service: "LLMService") -> JobAnalysis:
-    """Heuristic extraction when structured parsing fails or omits role details."""
+    """Minimal extraction when structured parsing fails or omits role details.
 
-    role_title = _guess_role_title(job_description)
-    seniority = _normalize_seniority(role_title or job_description)
-    role_type = _normalize_role_type(None, f"{role_title} {job_description}")
+    Role title is intentionally left as "Role not detected" to avoid overriding
+    the value that should come from the job_analysis prompt. Seniority and
+    role type are still normalized from the description to keep downstream
+    logic working, and requirements are extracted via the existing prompt.
+    """
+
+    seniority = _normalize_seniority(job_description)
+    role_type = _normalize_role_type(None, job_description)
 
     requirements: List[str] = []
     try:
@@ -777,27 +922,8 @@ def _fallback_job_analysis(job_description: str, service: "LLMService") -> JobAn
         logger.exception("Fallback requirement extraction failed: %s", exc)
 
     return JobAnalysis(
-        role_title=role_title or "Role not detected",
+        role_title="Role not detected",
         seniority=seniority,
         role_type=role_type,
         requirements=requirements,
     )
-
-
-def _guess_role_title(job_description: str) -> str:
-    """Pull the most plausible role title from the first descriptive lines."""
-
-    try:
-        lines = [line.strip(" -*\t") for line in job_description.splitlines() if line.strip()]
-        for line in lines:
-            lower = line.lower()
-            if any(lower.startswith(prefix) for prefix in ["job title", "role", "position"]):
-                candidate = line.split(":", 1)[-1].strip()
-                if candidate:
-                    return candidate
-            if 1 <= len(line.split()) <= 12:
-                return line
-    except Exception as exc:  # pragma: no cover - defensive guardrail
-        logger.exception("Role title guess failed: %s", exc)
-
-    return ""
