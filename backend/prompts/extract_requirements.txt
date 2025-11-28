@@ -12,9 +12,9 @@ The candidate wants to understand the most critical requirements they must be re
 
 ### Task
 1. Read the job description carefully.
-2. Identify the 5–10 most important requirements for success in this role.
+2. Identify the 5–7 most important requirements for success in this role.
    - Include both hard skills (tools, technologies, methods) and soft skills (communication, leadership, etc.).
-3. Make each requirement short (2–6 words) and specific.
+3. Make each requirement short (2–4 words) and specific.
 4. Prioritize them: start from the most critical ones.
 
 ### Output Requirements
