@@ -42,6 +42,44 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class JobProfile:
+    """Role details detected from the job post and requirements list."""
+
+    role_title: str
+    seniority: str
+    role_type: str
+    requirements: List[str]
+
+
+@dataclass
+class StrengthsWeaknesses:
+    """Grouped strengths and weaknesses extracted from a CV."""
+
+    strengths: List[str]
+    weaknesses: List[str]
+
+
+@dataclass
+class MatchReport:
+    """Structured information describing the job alignment."""
+
+    match_score: int
+    likelihood: str
+    reasoning: str
+
+
+@dataclass
+class AnswerEvaluation:
+    """Evaluation details for a candidate's answer to a question."""
+
+    question: str
+    answer: str
+    score: int
+    summary: str
+    improvements: List[str]
+
+
 DEFAULT_PROMPTS = {
     "extract_requirements": (
         "You are an assistant that reads job descriptions and lists the 3-6 most "
@@ -88,22 +126,6 @@ DEFAULT_PROMPTS = {
         "\nSeniority: {seniority}\nRequirements: {requirements}\nCandidates:\n{candidate_questions}\n{format_instructions}"
     ),
 }
-
-
-@dataclass
-class MatchReport:
-    """Structured information describing the job alignment."""
-
-    match_score: int
-    likelihood: str
-    reasoning: str
-
-
-@dataclass
-class AnswerEvaluation:
-    score: int
-    summary: str
-    improvements: List[str]
 
 
 @dataclass
@@ -565,7 +587,13 @@ class LLMService:
             score = int(data.get("score", 0))
             summary = str(data.get("summary", "")).strip()
             improvements = [str(x).strip() for x in data.get("improvements", []) if str(x).strip()]
-            return AnswerEvaluation(score=score, summary=summary, improvements=improvements)
+            return AnswerEvaluation(
+                question=question or "",
+                answer=answer or "",
+                score=score,
+                summary=summary,
+                improvements=improvements,
+            )
         except Exception as exc:
             logger.exception("Failed to parse answer evaluation JSON: %s; raw=%r", exc, raw)
             return None
