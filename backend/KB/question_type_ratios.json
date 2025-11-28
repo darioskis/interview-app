@@ -1,0 +1,22 @@
+[
+  {
+    "role_id": "tech_001",
+    "role_name": "Backend Engineer",
+    "category": "Technical",
+    "weights": {
+      "technical_percentage": 80,
+      "soft_skill_percentage": 20
+    },
+    "prompt_instruction": "Focus heavily on algorithms, system design, and database queries. Use soft skills only to assess communication of complex ideas."
+  },
+  {
+    "role_id": "tech_002",
+    "role_name": "Frontend Engineer",
+    "category": "Technical",
+    "weights": {
+      "technical_percentage": 75,
+      "soft_skill_percentage": 25
+    },
+    "prompt_instruction": "Focus on frameworks (React/Vue), CSS, and DOM manipulation. Soft skills should check for collaboration with designers."
+  }
+]
