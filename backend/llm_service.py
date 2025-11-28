@@ -4,6 +4,7 @@ from __future__ import annotations
 
 """Utility functions for interacting with the OpenAI API and knowledge-base-driven interview flows."""
 
+import json
 import logging
 import os
 from dataclasses import dataclass
@@ -208,6 +209,37 @@ class LLMService:
         except Exception as exc:  # pragma: no cover - defensive guardrail
             logger.exception("LLM prompt failed: %s", exc)
             raise RuntimeError("LLM call failed") from exc
+
+    def run_job_profile_tool(self, job_description: str) -> JobProfile:
+        """Tool 1: analyze a job description and return a structured job profile."""
+
+        prompt = self._prompts["job_analysis"].format(job_description=job_description)
+        raw = self._call(prompt)
+
+        try:
+            payload = json.loads(_extract_json(raw))
+        except Exception:  # pragma: no cover - defensive guardrail
+            logger.exception("Failed to parse job profile JSON, falling back.")
+            return JobProfile(
+                role_title="Unknown role",
+                seniority="Regular Employee",
+                role_type="Non-technical",
+                requirements=[],
+            )
+
+        role_title = str(payload.get("role_title", "")).strip() or "Unknown role"
+        seniority = str(payload.get("seniority", "")).strip() or "Regular Employee"
+        role_type = str(payload.get("role_type", "")).strip() or "Non-technical"
+        requirements = [
+            str(r).strip() for r in payload.get("requirements", []) if str(r).strip()
+        ]
+
+        return JobProfile(
+            role_title=role_title,
+            seniority=seniority,
+            role_type=role_type,
+            requirements=requirements,
+        )
 
     def analyze_job_post(self, job_description: str) -> JobAnalysis | None:
         """Use LangChain to extract role metadata and requirements from a JD."""
@@ -473,8 +505,6 @@ class LLMService:
             strengths=list(strengths),
             weaknesses=list(weaknesses),
         )
-        import json
-
         try:
             raw = self._call(prompt)
             try:
@@ -669,8 +699,6 @@ def _extract_json(text: str) -> str:
 
 
 def _maybe_json(text: str) -> Dict:
-    import json
-
     try:
         return json.loads(_extract_json(text))
     except Exception:
