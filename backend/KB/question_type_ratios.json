@@ -18,5 +18,85 @@
       "soft_skill_percentage": 25
     },
     "prompt_instruction": "Focus on frameworks (React/Vue), CSS, and DOM manipulation. Soft skills should check for collaboration with designers."
+  },
+  {
+    "role_id": "tech_003",
+    "role_name": "DevOps / SRE",
+    "category": "Technical",
+    "weights": {
+      "technical_percentage": 85,
+      "soft_skill_percentage": 15
+    },
+    "prompt_instruction": "Deep dive into CI/CD, cloud infrastructure, and linux internals. Soft skills focus on crisis management and incident response."
+  },
+  {
+    "role_id": "tech_004",
+    "role_name": "Data Scientist",
+    "category": "Technical",
+    "weights": {
+      "technical_percentage": 70,
+      "soft_skill_percentage": 30
+    },
+    "prompt_instruction": "Focus on statistics, Python/R, and ML models. Soft skills must verify the ability to explain data insights to non-technical stakeholders."
+  },
+  {
+    "role_id": "hybrid_001",
+    "role_name": "Engineering Manager",
+    "category": "Hybrid",
+    "weights": {
+      "technical_percentage": 40,
+      "soft_skill_percentage": 60
+    },
+    "prompt_instruction": "Technical questions should be high-level architecture and code quality standards. Majority focus on people management, conflict resolution, and hiring."
+  },
+  {
+    "role_id": "hybrid_002",
+    "role_name": "Product Manager",
+    "category": "Hybrid",
+    "weights": {
+      "technical_percentage": 30,
+      "soft_skill_percentage": 70
+    },
+    "prompt_instruction": "Technical focus is only on feasibility and understanding the stack. Heavy focus on prioritization, stakeholder management, and user empathy."
+  },
+  {
+    "role_id": "nontech_001",
+    "role_name": "HR Specialist / Recruiter",
+    "category": "Non-Technical",
+    "weights": {
+      "technical_percentage": 10,
+      "soft_skill_percentage": 90
+    },
+    "prompt_instruction": "Technical refers only to labor laws or ATS tools. Primary focus is on emotional intelligence, judgement, and communication."
+  },
+  {
+    "role_id": "nontech_002",
+    "role_name": "Sales Representative",
+    "category": "Non-Technical",
+    "weights": {
+      "technical_percentage": 15,
+      "soft_skill_percentage": 85
+    },
+    "prompt_instruction": "Technical refers to product knowledge. Main focus is on negotiation, resilience, and persuasion techniques."
+  },
+  {
+    "role_id": "nontech_003",
+    "role_name": "Scrum Master",
+    "category": "Non-Technical",
+    "weights": {
+      "technical_percentage": 20,
+      "soft_skill_percentage": 80
+    },
+    "prompt_instruction": "Technical refers to Agile methodologies (Kanban/Scrum). Heavy focus on facilitation, conflict resolution, and servant leadership."
+  },
+  {
+    "role_id": "nontech_004",
+    "role_name": "Customer Support Lead",
+    "category": "Non-Technical",
+    "weights": {
+      "technical_percentage": 25,
+      "soft_skill_percentage": 75
+    },
+    "prompt_instruction": "Technical refers to troubleshooting steps and ticketing systems. Focus on patience, de-escalation, and empathy."
   }
 ]
