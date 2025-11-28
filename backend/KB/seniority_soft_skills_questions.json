@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Adaptability",
+    "question": "Describe a time when the scope of a project changed midway through. How did you handle the shift in priorities?"
+  },
+  {
+    "id": 2,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Conflict Resolution",
+    "question": "Tell me about a time you strongly disagreed with a peer's approach to a problem. How did you resolve it?"
+  },
+  {
+    "id": 3,
+    "seniority_level": "Regular Employee",
+    "soft_skill": "Time Management",
+    "question": "Walk me through your process for prioritizing tasks when everything seems urgent."
+  }
+]
